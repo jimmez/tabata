@@ -96,7 +96,7 @@
   }
   .btn:hover{background:var(--muted2)}
   .btn:active{transform:translateY(1px)}
-  .btn-xxl{font-size:22px; padding:16px 22px; border-radius:18px; min-width:170px}
+  .btn-xxl{font-size:22px; padding:14px 18px; border-radius:16px; min-width:150px}
   .btn.disabled{opacity:.45; filter:grayscale(.2); cursor:not-allowed}
   .btn.active{ outline:2px solid rgba(255,255,255,.12); }
 
@@ -111,16 +111,17 @@
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     min-height:56vh;   /* centered when controls hidden */
   }
-  /* When controls are visible (blue-ball OFF), shrink center area so buttons sit higher */
-  .app:not(.controls-hidden) .midwrap{ min-height:44vh; }
-
   .clock{font-size:112px; font-weight:900; line-height:1; letter-spacing:.02em; margin:6px 0}
-  .cta.hideable{
+
+  /* ACTIONS directly under the numbers (higher to avoid blue ball) */
+  .actions.hideable{
     display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:flex-start;
-    margin-top:2px; padding-top:0;
+    margin-top:4px;
   }
-  .row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+  .actions .row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
   .hint{font-size:12px; opacity:.8}
+  .hint-scroll{font-size:12px; opacity:.75; margin-top:2px}
+  .controls-hidden .hint-scroll{display:none} /* hide hint in blue-ball mode */
 
   /* Settings: compact, one screen (hideable) */
   .settings.hideable{background:var(--muted2); border:1px solid var(--border); border-radius:14px; padding:10px 12px}
@@ -144,7 +145,7 @@
 
   @media (max-width:420px){
     .clock{font-size:96px}
-    .btn-xxl{min-width:160px}
+    .btn-xxl{min-width:140px}
     .digit{width:42px; height:54px; font-size:24px}
     .ud button{width:42px; padding:8px 0; font-size:16px}
     .digit-grid{max-width:330px}
@@ -154,17 +155,22 @@
   /* Hideable controls toggle */
   .controls-hidden .hideable{display:none !important;}
 
-  /* Floating light-blue ball (FAB) — toggles hide/show controls */
+  /* Floating light-blue ball (FAB) — left & lower so it never blocks numbers */
   .fab{
-    position:fixed; bottom:70px; left:50%; transform:translateX(-50%);
+    position:fixed; bottom:84px; left:18px; transform:none;
     width:64px; height:64px; border-radius:50%;
     background:var(--fab); color:#002244;
     display:grid; place-items:center; font-weight:900;
     box-shadow:0 12px 24px rgba(0,0,0,.35), 0 0 0 3px rgba(255,255,255,.2) inset;
     z-index:12; cursor:pointer; user-select:none;
   }
-  .fab:active{transform:translateX(-50%) scale(.98)}
+  .fab:active{transform:scale(.98)}
   .fab .dot{font-size:26px}
+
+  /* Landscape: push the ball even further away from center */
+  @media (orientation:landscape){
+    .fab{ bottom:24px; left:24px; }
+  }
 
   /* Footer */
   .footer{
@@ -237,14 +243,15 @@
           <div class="clock" id="clock">01:00</div>
         </div>
 
-        <!-- Buttons now appear higher (because midwrap is shorter when visible) -->
-        <div class="cta hideable">
+        <!-- ACTIONS are now directly under the numbers -->
+        <div class="actions hideable">
           <div class="row">
             <button id="startBtn" class="btn btn-xxl" aria-pressed="false">▶️ Start / Pause</button>
             <button id="resetBtn" class="btn btn-xxl">⏹ Reset</button>
           </div>
-          <div class="row"><div class="hint">Tap anywhere: 1× pause/resume • 2× reset current • 3× next phase</div></div>
-          <div class="row"><div class="hint">Swipe anywhere or tap the blue ball to hide/show controls</div></div>
+          <div class="hint">Tap anywhere: 1× pause/resume • 2× reset current • 3× next phase</div>
+          <div class="hint">Swipe anywhere or tap the blue ball to hide/show controls</div>
+          <div class="hint-scroll">Scroll to next page for instructions →</div>
         </div>
       </div>
     </section>
@@ -330,11 +337,12 @@
             <li>3× = Next phase (Work↔Rest), rep +1 when leaving Rest</li>
           </ul>
         </li>
-        <li><b>Blue ball</b> (bottom center): tap to hide/show controls.</li>
+        <li><b>Blue ball</b> (bottom-left): tap to hide/show controls.</li>
         <li><b>Swipe anywhere</b>: also hides/shows controls (blue-ball mode).</li>
         <li><b>Work</b> mode: labels are light blue; <b>Rest</b> mode: numbers are yellow; <b>Paused</b>: numbers are purple.</li>
         <li><b>Rep</b> (top-right): tap +1; long-press resets to 1.</li>
         <li>Open <b>Settings</b> to set Work/Rest (per-digit +/– or tap digits to type). Changes auto-save.</li>
+        <li>Defaults: <b>Work 1:00</b>, <b>Rest 0:20</b>.</li>
       </ul>
     </section>
   </div>
@@ -370,17 +378,18 @@
   // ---------- Persistence ----------
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v21')||'{}');
+      const saved = JSON.parse(localStorage.getItem('tabata_v22')||'{}');
       if(Number.isFinite(saved.work)) state.work = saved.work;
       if(Number.isFinite(saved.rest)) state.rest = saved.rest;
       if(typeof saved.muted==='boolean') state.muted = saved.muted;
       if(Number.isFinite(saved.volume)) state.volume = saved.volume;
       if(typeof saved.rep==='number') state.rep = Math.max(1, Math.floor(saved.rep));
+      if(typeof saved.controlsHidden==='boolean') state.controlsHidden = saved.controlsHidden;
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v21', JSON.stringify({
-      work:state.work, rest:state.rest, muted:state.muted, volume:state.volume, rep:state.rep
+    localStorage.setItem('tabata_v22', JSON.stringify({
+      work:state.work, rest:state.rest, muted:state.muted, volume:state.volume, rep:state.rep, controlsHidden:state.controlsHidden
     }));
   }
 
@@ -639,6 +648,7 @@
     if(dx>40 || dy>40){
       didSwipe=true;
       state.controlsHidden = !state.controlsHidden;
+      persist();
       updateAllUI();
       if(tapTimer){ clearTimeout(tapTimer); tapTimer=null; tapCount=0; }
     }
@@ -652,6 +662,7 @@
   fab.addEventListener('click', (e)=>{
     e.stopPropagation();
     state.controlsHidden = !state.controlsHidden;
+    persist();
     updateAllUI();
   });
 
