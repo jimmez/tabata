@@ -27,7 +27,6 @@
     --rest2: rgba(239,68,68,.65);
 
     --fab:#60a5fa;           /* floating ball color */
-    --ok:#34d399;
   }
 
   *{box-sizing:border-box}
@@ -65,7 +64,7 @@
   .meta-top .tag{background:var(--muted2); border:1px solid var(--border);
                  border-radius:999px; padding:5px 9px}
 
-  /* TOP-RIGHT: Big REP + small info button */
+  /* TOP-RIGHT: Big REP + info */
   .top-right{
     position:fixed; top:6px; right:8px; z-index:11; display:flex; align-items:center; gap:8px;
   }
@@ -82,7 +81,7 @@
   }
   .pill:active{transform:translateY(1px)}
 
-  /* Controls/topbar row (hideable) */
+  /* Topbar (hideable via blue ball) */
   .topbar.hideable{
     display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap
   }
@@ -123,7 +122,7 @@
   .timer{ text-align:center; padding:0 6px}
   .midwrap{
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    min-height:56vh;   /* centered when controls hidden */
+    min-height:56vh;
   }
   .pause-banner{
     display:none; font-size:48px; font-weight:1000; letter-spacing:.12em;
@@ -142,8 +141,8 @@
   .actions .row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
   .hint{font-size:12px; opacity:.8}
 
-  /* Settings: compact, one screen (hideable) */
-  .settings.hideable{background:var(--muted2); border:1px solid var(--border); border-radius:14px; padding:10px 12px}
+  /* Settings: compact, one screen (not hideable) */
+  .settings{background:var(--muted2); border:1px solid var(--border); border-radius:14px; padding:10px 12px}
   h2{margin:4px 0 8px; font-size:16px; text-transform:uppercase; letter-spacing:.07em}
   .block{background:var(--muted); border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:8px}
   .digit-grid{display:grid; grid-template-columns:repeat(4, minmax(44px,1fr)); gap:8px; max-width:360px; margin:0 auto}
@@ -187,7 +186,7 @@
   .fab:active{transform:scale(.98)}
   .fab .dot{font-size:26px}
 
-  /* Landscape: keep it away from center but a bit lower */
+  /* Landscape placement tweak */
   @media (orientation:landscape){
     .fab{ bottom:80px; left:24px; }
   }
@@ -199,7 +198,7 @@
     padding:8px 6px; background:var(--muted2); z-index:5; line-height:1.25;
   }
 
-  /* Help/Explanation page (separate screen; no swipes) */
+  /* Help/Explanation page (no swipes) */
   .helpwrap{
     max-width:860px; margin:8px auto 120px; padding:0 8px;
   }
@@ -248,7 +247,7 @@
       <button id="openHelp" class="pill" aria-label="Open instructions">ℹ️</button>
     </div>
 
-    <!-- CONTROLS BAR (hideable) -->
+    <!-- CONTROLS BAR (hideable by blue ball; NOT in settings) -->
     <div class="topbar hideable">
       <div class="left" style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -291,9 +290,9 @@
       </div>
     </section>
 
-    <!-- SETTINGS SCREEN (auto-save; Back + Reset only) -->
+    <!-- SETTINGS SCREEN (always visible controls; blue ball disabled) -->
     <section id="settingsScreen" class="screen">
-      <div class="settings hideable">
+      <div class="settings">
         <h2>Work</h2>
         <div class="block" id="blockWork">
           <div class="digit-grid" data-kind="work">
@@ -357,18 +356,20 @@
         <div class="settings-cta">
           <button class="btn" id="backToTimer">↩️ Back</button>
           <button class="btn" id="settingsReset" title="Tap to zero times • Tap 4× to reset repetitions">⏹ Reset</button>
+          <!-- The same big Settings button is used to exit settings too -->
+          <button class="btn btn-settings-big" id="toggleSettings">⚙️ Settings</button>
         </div>
         <div class="hint">Tip: Press <b>Reset</b> 4× quickly to reset repetitions to 1.</div>
       </div>
     </section>
 
-    <!-- HELP / INSTRUCTIONS (separate screen; no swipes) -->
+    <!-- HELP / INSTRUCTIONS (no swipes) -->
     <section id="helpScreen" class="screen">
       <div class="helpwrap">
         <div class="help">
           <h3>How it works</h3>
           <ul>
-            <li><b>Tap anywhere</b> on the timer:
+            <li><b>Tap anywhere</b> on the main timer:
               <ul>
                 <li>1× = Start / Pause / Resume</li>
                 <li>2× = Reset current phase to start</li>
@@ -422,7 +423,7 @@
   // ---------- Persistence ----------
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v27')||'{}');
+      const saved = JSON.parse(localStorage.getItem('tabata_v28')||'{}');
       if(Number.isFinite(saved.work)) state.work = saved.work;
       if(Number.isFinite(saved.rest)) state.rest = saved.rest;
       if(typeof saved.muted==='boolean') state.muted = saved.muted;
@@ -432,7 +433,7 @@
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v27', JSON.stringify({
+    localStorage.setItem('tabata_v28', JSON.stringify({
       work:state.work, rest:state.rest, muted:state.muted, volume:state.volume, rep:state.rep, controlsHidden:state.controlsHidden
     }));
   }
@@ -459,6 +460,9 @@
   const resetBtn = el('resetBtn');
   const fab = el('fab');
 
+  const openSettingsBtn = el('openSettings');   // main/topbar big settings
+  const toggleSettingsBtn = el('toggleSettings'); // settings page also has a settings button
+
   // ---------- Topbar ----------
   soundToggle.checked = !state.muted;
   volumeInput.value = Math.round(state.volume*100);
@@ -466,10 +470,21 @@
   volumeInput.addEventListener('input', ()=>{ state.volume = clamp(+volumeInput.value/100,0,1); persist(); });
 
   // ---------- Nav buttons (no swipes) ----------
-  el('openSettings').addEventListener('click', openSettings);
-  el('backToTimer').addEventListener('click', ()=> showScreen('timer'));
   el('openHelp').addEventListener('click', ()=> showScreen('help'));
   el('backFromHelp').addEventListener('click', ()=> showScreen('timer'));
+  el('backToTimer').addEventListener('click', ()=> showScreen('timer'));
+
+  // Settings button behavior:
+  function onSettingsPressed(){
+    if(settingsScreen.classList.contains('active')){
+      // If already in settings, pressing Settings returns to main
+      showScreen('timer');
+    } else {
+      openSettings();
+    }
+  }
+  openSettingsBtn.addEventListener('click', onSettingsPressed);
+  toggleSettingsBtn.addEventListener('click', onSettingsPressed);
 
   function showScreen(which){
     // timer | settings | help
@@ -480,10 +495,8 @@
     // Settings mode rule: always show controls, blue ball disabled
     if(which==='settings'){
       state.controlsHidden = false;
-      updateAllUI();
-    } else {
-      updateAllUI();
     }
+    updateAllUI();
   }
   function openSettings(){
     pause(); showScreen('settings');
@@ -690,7 +703,7 @@
   }
   resetBtn.addEventListener('click', (e)=>{ e.stopPropagation(); doResetReps(); });
 
-  // ---------- Anywhere taps: 1x pause/resume, 2x restart current, 3x next phase ----------
+  // ---------- Anywhere taps on main timer ----------
   let tapCount = 0, tapTimer = null;
   function commitTapActions(){
     const c = tapCount; tapCount=0; clearTimeout(tapTimer); tapTimer=null;
@@ -765,9 +778,9 @@
     osc.stop(now+dur+0.02);
     return dur;
   }
-  // Work start tone: 0.5s, half-octave up from A4
+  // Work start tone: 0.5s, half-octave up from A4 (~622 Hz)
   function workTone(){
-    const base = 440 * HALF_OCT;        // ~622 Hz
+    const base = 440 * HALF_OCT;
     beep(base, 0.5);
   }
   // Rest start tones: two pitches 0.3s each, both half-octave higher (doorbell-like)
@@ -805,12 +818,9 @@
     }, 900); // 4 taps within ~0.9s
   });
 
-  // Back from settings
-  el('backToTimer').addEventListener('click', ()=> showScreen('timer'));
-
   // ---------- Initial draw ----------
   function updateProgressOnInit(){
-    // draw initial small bar for work (green)
+    // draw initial small bar for current phase
     const total = currentTotal();
     const frac = total>0 ? Math.min(state.elapsed/total, 1) : 0;
     progressFull.style.height = (Math.max(6, frac*100)).toFixed(2)+'vh';
