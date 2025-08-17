@@ -27,6 +27,7 @@
     --rest2: rgba(239,68,68,.65);
 
     --fab:#60a5fa;           /* floating ball color */
+    --ok:#34d399;
   }
 
   *{box-sizing:border-box}
@@ -64,7 +65,7 @@
   .meta-top .tag{background:var(--muted2); border:1px solid var(--border);
                  border-radius:999px; padding:5px 9px}
 
-  /* TOP-RIGHT cluster: big REP + small buttons */
+  /* TOP-RIGHT: Big REP + small info button */
   .top-right{
     position:fixed; top:6px; right:8px; z-index:11; display:flex; align-items:center; gap:8px;
   }
@@ -108,6 +109,12 @@
   .btn.disabled{opacity:.45; filter:grayscale(.2); cursor:not-allowed}
   .btn.active{ outline:2px solid rgba(255,255,255,.12); }
 
+  /* Special big Settings button (left-hand friendly) */
+  .btn-settings-big{
+    width:100%; max-width:220px; font-size:20px; padding:14px 16px; border-radius:14px;
+    display:block; margin-top:8px;
+  }
+
   /* Screens */
   .screen{display:none}
   .screen.active{display:block}
@@ -127,7 +134,7 @@
   .clock{font-size:112px; font-weight:900; line-height:1; letter-spacing:.02em; margin:6px 0}
   .phase{font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin-top:6px}
 
-  /* ACTIONS directly under the numbers (higher to avoid blue ball) */
+  /* ACTIONS directly under the numbers */
   .actions.hideable{
     display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:flex-start;
     margin-top:4px;
@@ -211,6 +218,15 @@
   body.mode-rest .clock{ color:var(--nums-rest); }
   body.mode-pause .clock{ color:var(--nums-pause); }
   body.mode-pause .pause-banner{ display:block; }
+
+  /* Tiny toast */
+  .toast{
+    position:fixed; top:56px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,.7); padding:10px 14px; border-radius:10px;
+    border:1px solid var(--border); color:#fff; font-size:14px; z-index:20; display:none;
+  }
+  .toast.show{display:block; animation:fade 1.2s ease forwards}
+  @keyframes fade{0%{opacity:0; transform:translateX(-50%) translateY(-6px)} 12%{opacity:1; transform:translateX(-50%) translateY(0)} 80%{opacity:1} 100%{opacity:0}}
 </style>
 </head>
 <body class="mode-work">
@@ -218,7 +234,7 @@
   <div id="progressFull" class="progress-full"></div>
 
   <div class="app" id="app">
-    <!-- VERY TOP: small grey Work/Rest goal times -->
+    <!-- VERY TOP: small grey Work/Rest times -->
     <div class="meta-top">
       <div class="group">
         <span class="tag">Work <b id="workGoalTop">01:00</b></span>
@@ -226,31 +242,32 @@
       </div>
     </div>
 
-    <!-- TOP-RIGHT: Big REP + small buttons -->
+    <!-- TOP-RIGHT: Big REP + info -->
     <div class="top-right">
       <button id="repBtn" class="rep-big" title="Tap: +1 rep • Long-press: reset to 1">1</button>
-      <button id="openSettings" class="pill" aria-label="Open settings">⚙️</button>
       <button id="openHelp" class="pill" aria-label="Open instructions">ℹ️</button>
     </div>
 
     <!-- CONTROLS BAR (hideable) -->
     <div class="topbar hideable">
-      <div class="left">
-        <label class="chip" title="Toggle all sounds">
-          <span>Sound</span>
-          <div class="switch">
-            <input type="checkbox" id="soundToggle" checked />
-            <div class="knob"></div>
-          </div>
-        </label>
-        <label class="chip" title="Volume">
-          <span>Vol</span>
-          <input id="volume" type="range" min="0" max="100" value="70" />
-        </label>
+      <div class="left" style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <label class="chip" title="Toggle all sounds">
+            <span>Sound</span>
+            <div class="switch">
+              <input type="checkbox" id="soundToggle" checked />
+              <div class="knob"></div>
+            </div>
+          </label>
+          <label class="chip" title="Volume">
+            <span>Vol</span>
+            <input id="volume" type="range" min="0" max="100" value="70" />
+          </label>
+        </div>
+        <!-- Big left-hand Settings button -->
+        <button class="btn btn-settings-big" id="openSettings">⚙️ Settings</button>
       </div>
-      <div class="right">
-        <!-- empty on purpose -->
-      </div>
+      <div class="right"></div>
     </div>
 
     <!-- TIMER SCREEN (MAIN) -->
@@ -266,7 +283,7 @@
         <div class="actions hideable">
           <div class="row">
             <button id="startBtn" class="btn btn-xxl" aria-pressed="false">▶️ Start / Pause</button>
-            <button id="resetBtn" class="btn btn-xxl">⏹ Reset</button>
+            <button id="resetBtn" class="btn btn-xxl" title="Reset repetitions to 1">⏹ Reset Reps</button>
           </div>
           <div class="hint">Tap anywhere: 1× pause/resume • 2× reset current • 3× next phase</div>
           <div class="hint">Tap the blue ball to hide/show controls</div>
@@ -339,8 +356,9 @@
 
         <div class="settings-cta">
           <button class="btn" id="backToTimer">↩️ Back</button>
-          <button class="btn" id="settingsReset">⏹ Reset</button>
+          <button class="btn" id="settingsReset" title="Tap to zero times • Tap 4× to reset repetitions">⏹ Reset</button>
         </div>
+        <div class="hint">Tip: Press <b>Reset</b> 4× quickly to reset repetitions to 1.</div>
       </div>
     </section>
 
@@ -357,8 +375,8 @@
                 <li>3× = Next phase (Work↔Rest), rep +1 when leaving Rest</li>
               </ul>
             </li>
-            <li><b>Blue ball</b> (left): tap to hide/show controls.</li>
-            <li>Open <b>Settings</b> (⚙️) to edit times (per-digit +/– or tap digits to type). Changes auto-save.</li>
+            <li><b>Blue ball</b> (left): tap to hide/show controls (disabled while in Settings).</li>
+            <li>Open <b>Settings</b> to edit times (per-digit +/– or tap digits to type). Changes auto-save.</li>
             <li>Defaults: <b>Work 1:00</b>, <b>Rest 0:20</b>.</li>
             <li><button class="btn" id="backFromHelp">← Back</button></li>
           </ul>
@@ -373,6 +391,8 @@
   <!-- FOOTER -->
   <div class="footer">Jimmy James - 17.08.2025 - 11:55 - v. 1.08</div>
 
+  <div id="toast" class="toast">Repetitions reset to 1</div>
+
 <script>
   // ---------- Utilities ----------
   const el = id => document.getElementById(id);
@@ -381,6 +401,10 @@
   const clamp = (v,min,max) => Math.min(max, Math.max(min, v));
   const pad = n => String(n).padStart(2,'0');
   const fmt = secs => pad(Math.floor(secs/60))+':'+pad(secs%60);
+  const showToast = (txt)=>{
+    const t=el('toast'); t.textContent=txt; t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 1200);
+  };
 
   // ---------- State ----------
   const state = {
@@ -398,7 +422,7 @@
   // ---------- Persistence ----------
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v26')||'{}');
+      const saved = JSON.parse(localStorage.getItem('tabata_v27')||'{}');
       if(Number.isFinite(saved.work)) state.work = saved.work;
       if(Number.isFinite(saved.rest)) state.rest = saved.rest;
       if(typeof saved.muted==='boolean') state.muted = saved.muted;
@@ -408,7 +432,7 @@
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v26', JSON.stringify({
+    localStorage.setItem('tabata_v27', JSON.stringify({
       work:state.work, rest:state.rest, muted:state.muted, volume:state.volume, rep:state.rep, controlsHidden:state.controlsHidden
     }));
   }
@@ -452,6 +476,13 @@
     const map = {timer:timerScreen, settings:settingsScreen, help:helpScreen};
     for(const [k,sec] of Object.entries(map)){
       if(k===which) sec.classList.add('active'); else sec.classList.remove('active');
+    }
+    // Settings mode rule: always show controls, blue ball disabled
+    if(which==='settings'){
+      state.controlsHidden = false;
+      updateAllUI();
+    } else {
+      updateAllUI();
     }
   }
   function openSettings(){
@@ -501,7 +532,7 @@
 
   function updateProgressAndBackground(){
     const total = currentTotal();
-    const frac = total>0 ? Math.min(state.elapsed/total, 1) : 1;   // RISE from bottom (both phases per latest spec)
+    const frac = total>0 ? Math.min(state.elapsed/total, 1) : 1;   // RISE from bottom (both phases)
     const minVH = 6;
     progressFull.style.height = (Math.max(minVH, frac*100)).toFixed(2)+'vh';
 
@@ -529,13 +560,17 @@
     updateMetaTop();
     updateProgressAndBackground();
     setModeClasses();
+
+    // Only hide controls on timer/help screens; never in settings
+    const canHide = !settingsScreen.classList.contains('active');
+    app.classList.toggle('controls-hidden', state.controlsHidden && canHide);
+
     startBtn.classList.toggle('active', state.running);
     startBtn.setAttribute('aria-pressed', String(state.running));
-    app.classList.toggle('controls-hidden', state.controlsHidden);
   }
 
   // init
-  updateMetaTop(); updateStartEnabled(); updateAllUI();
+  updateStartEnabled(); updateAllUI();
 
   // ---------- Digit editor (auto-save) ----------
   function populateDigits(kind, secs){
@@ -648,7 +683,12 @@
 
   // Buttons
   startBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggleStartPause(); });
-  resetBtn.addEventListener('click', (e)=>{ e.stopPropagation(); restartCurrentPhase(); });
+
+  // MAIN Reset button: reset all repetitions to 1 + restart current phase
+  function doResetReps(){
+    state.rep = 1; persist(); restartCurrentPhase(); showToast('Repetitions reset to 1');
+  }
+  resetBtn.addEventListener('click', (e)=>{ e.stopPropagation(); doResetReps(); });
 
   // ---------- Anywhere taps: 1x pause/resume, 2x restart current, 3x next phase ----------
   let tapCount = 0, tapTimer = null;
@@ -666,9 +706,10 @@
     tapTimer=setTimeout(commitTapActions, 350);
   });
 
-  // Blue ball toggles controls (only method to hide/show)
+  // Blue ball toggles controls (disabled in Settings)
   fab.addEventListener('click', (e)=>{
     e.stopPropagation();
+    if(settingsScreen.classList.contains('active')) return; // disabled in settings
     state.controlsHidden = !state.controlsHidden;
     persist();
     updateAllUI();
@@ -679,7 +720,7 @@
   repBtn.addEventListener('pointerdown', ()=>{
     repPressed=true;
     repPressTimer = setTimeout(()=>{
-      if(repPressed){ state.rep=1; persist(); updateAllUI(); }
+      if(repPressed){ state.rep=1; persist(); updateAllUI(); showToast('Repetitions reset to 1'); }
     }, 500); // long-press resets to 1
   });
   repBtn.addEventListener('pointerup', ()=>{
@@ -739,7 +780,42 @@
   }
   function runPhaseTone(){ if(state.muted) return; (state.phase==='work') ? workTone() : restTone(); }
 
+  // ---------- Settings Reset special: 4 taps -> reset repetitions ----------
+  let settingsResetCount = 0;
+  let settingsResetTimer = null;
+  el('settingsReset').addEventListener('click', ()=>{
+    // Normal behavior: zero times
+    pause();
+    state.work = 0; state.rest = 0;
+    persist();
+    populateDigits('work', state.work);
+    populateDigits('rest', state.rest);
+    updateMetaTop();
+    updateStartEnabled();
+    updateAllUI();
+
+    // Count taps for 4x action
+    settingsResetCount++;
+    if(settingsResetTimer) clearTimeout(settingsResetTimer);
+    settingsResetTimer = setTimeout(()=>{
+      if(settingsResetCount >= 4){
+        state.rep = 1; persist(); showToast('Repetitions reset to 1');
+      }
+      settingsResetCount = 0;
+    }, 900); // 4 taps within ~0.9s
+  });
+
+  // Back from settings
+  el('backToTimer').addEventListener('click', ()=> showScreen('timer'));
+
   // ---------- Initial draw ----------
+  function updateProgressOnInit(){
+    // draw initial small bar for work (green)
+    const total = currentTotal();
+    const frac = total>0 ? Math.min(state.elapsed/total, 1) : 0;
+    progressFull.style.height = (Math.max(6, frac*100)).toFixed(2)+'vh';
+  }
+  updateProgressOnInit();
   updateAllUI();
 </script>
 </body>
