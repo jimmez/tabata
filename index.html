@@ -15,7 +15,7 @@
     --muted:rgba(255,255,255,.08);
     --muted2:rgba(255,255,255,.04);
 
-    /* Colors for accents */
+    /* Colors per requirement */
     --letters-work:#60a5fa;  /* light blue letters (work) */
     --nums-rest:#facc15;     /* yellow numbers (rest) */
     --nums-pause:#a855f7;    /* purple numbers (pause) */
@@ -55,16 +55,25 @@
     gap:10px; padding:8px 12px 92px; /* bottom space for footer */
   }
 
-  /* VERY TOP: Rep + small grey Work/Rest times */
+  /* VERY TOP: small grey Work/Rest times (rep moved to fixed button) */
   .meta-top{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    font-size:12px; color:#bbbbbb; opacity:.95; padding:4px 0 2px;
+    display:flex; align-items:center; justify-content:flex-start; gap:10px;
+    font-size:12px; color:#bbbbbb; opacity:.95; padding:4px 0 2px; min-height:28px;
   }
   .meta-top .group{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
   .meta-top .tag{background:var(--muted2); border:1px solid var(--border);
                  border-radius:999px; padding:5px 9px}
 
-  /* Controls/topbar row */
+  /* Always-visible REP button (top-right) */
+  .rep-btn{
+    position:fixed; top:6px; right:8px; z-index:11;
+    background:var(--muted2); color:#bbbbbb; border:1px solid var(--border);
+    border-radius:999px; padding:6px 10px; font-size:12px; font-weight:800;
+    cursor:pointer; user-select:none;
+  }
+  .rep-btn:active{transform:translateY(1px)}
+
+  /* Controls/topbar row (hideable) */
   .topbar.hideable{
     display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap
   }
@@ -103,7 +112,7 @@
   .row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
   .hint{font-size:12px; opacity:.8}
 
-  /* Settings: compact, one screen */
+  /* Settings: compact, one screen (hideable) */
   .settings.hideable{background:var(--muted2); border:1px solid var(--border); border-radius:14px; padding:10px 12px}
   h2{margin:4px 0 8px; font-size:16px; text-transform:uppercase; letter-spacing:.07em}
   .block{background:var(--muted); border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:8px}
@@ -135,16 +144,17 @@
   /* Hideable controls toggle */
   .controls-hidden .hideable{display:none !important;}
 
-  /* Floating light-blue ball (FAB) */
+  /* Floating light-blue ball (FAB) — toggles hide/show controls */
   .fab{
     position:fixed; bottom:70px; left:50%; transform:translateX(-50%);
     width:64px; height:64px; border-radius:50%;
     background:var(--fab); color:#002244;
     display:grid; place-items:center; font-weight:900;
     box-shadow:0 12px 24px rgba(0,0,0,.35), 0 0 0 3px rgba(255,255,255,.2) inset;
-    z-index:9; cursor:pointer; user-select:none;
+    z-index:12; cursor:pointer; user-select:none;
   }
   .fab:active{transform:translateX(-50%) scale(.98)}
+  .fab .dot{font-size:26px}
 
   /* Footer */
   .footer{
@@ -165,18 +175,20 @@
   <div id="progressFull" class="progress-full"></div>
 
   <div class="app" id="app">
-    <!-- VERY TOP: Rep + small grey Work/Rest times -->
+    <!-- VERY TOP: small grey Work/Rest goal times -->
     <div class="meta-top">
-      <div class="group">
-        <span class="tag">Rep <b id="repTop">1</b></span>
-      </div>
       <div class="group">
         <span class="tag">Work <b id="workGoalTop">00:20</b></span>
         <span class="tag">Rest <b id="restGoalTop">00:10</b></span>
       </div>
     </div>
 
-    <!-- CONTROLS BAR -->
+    <!-- Always-visible REP button (top-right) -->
+    <button id="repBtn" class="rep-btn" title="Tap: +1 rep • Long-press: reset to 1">
+      Rep <b id="repVal">1</b>
+    </button>
+
+    <!-- CONTROLS BAR (hideable) -->
     <div class="topbar hideable">
       <div class="left">
         <label class="chip" title="Toggle all sounds">
@@ -208,7 +220,7 @@
             <button id="resetBtn" class="btn btn-xxl">⏹ Reset</button>
           </div>
           <div class="row"><div class="hint">Tap anywhere: 1× pause/resume · 2× reset current · 3× next phase</div></div>
-          <div class="row"><div class="hint">Swipe anywhere to hide/show buttons • Use the blue ball to reveal</div></div>
+          <div class="row"><div class="hint">Use the blue ball to hide/show all controls</div></div>
         </div>
       </div>
     </section>
@@ -284,8 +296,8 @@
     </section>
   </div>
 
-  <!-- Floating light-blue ball to reveal controls -->
-  <div class="fab" id="fab" title="Show buttons">⦿</div>
+  <!-- Floating light-blue ball to hide/show controls -->
+  <div class="fab" id="fab" title="Hide/show controls"><span class="dot">●</span></div>
 
   <!-- FOOTER -->
   <div class="footer">Jimmy James - 17.08.2025 - 11:55 - v. 1.08</div>
@@ -315,16 +327,17 @@
   // ---------- Persistence ----------
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v18')||'{}');
+      const saved = JSON.parse(localStorage.getItem('tabata_v19')||'{}');
       if(Number.isFinite(saved.work)) state.work = saved.work;
       if(Number.isFinite(saved.rest)) state.rest = saved.rest;
       if(typeof saved.muted==='boolean') state.muted = saved.muted;
       if(Number.isFinite(saved.volume)) state.volume = saved.volume;
+      if(typeof saved.rep==='number') state.rep = Math.max(1, Math.floor(saved.rep));
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v18', JSON.stringify({
-      work:state.work, rest:state.rest, muted:state.muted, volume:state.volume
+    localStorage.setItem('tabata_v19', JSON.stringify({
+      work:state.work, rest:state.rest, muted:state.muted, volume:state.volume, rep:state.rep
     }));
   }
 
@@ -335,7 +348,8 @@
 
   const phaseEl = el('phase');
   const clockEl = el('clock');
-  const repTopEl = el('repTop');
+  const repBtn = el('repBtn');
+  const repVal = el('repVal');
 
   const workGoalTopEl = el('workGoalTop');
   const restGoalTopEl = el('restGoalTop');
@@ -386,7 +400,7 @@
     const wp=secsToParts(state.work), rp=secsToParts(state.rest);
     workGoalTopEl.textContent = pad(wp.m)+':'+pad(wp.s);
     restGoalTopEl.textContent = pad(rp.m)+':'+pad(rp.s);
-    repTopEl.textContent = state.rep;
+    repVal.textContent = state.rep;
   }
 
   function updateStartEnabled(){
@@ -511,10 +525,7 @@
     rafId=null;
     updateAllUI();
   }
-  function toggleStartPause(){
-    // 1-tap behavior = pause/resume
-    state.running ? pause() : start();
-  }
+  function toggleStartPause(){ state.running ? pause() : start(); }
 
   // Restart current phase (back to full time)
   function restartCurrentPhase(){
@@ -535,13 +546,14 @@
     state.elapsed=0;
     state.startTs = performance.now();
     runPhaseTone();
+    persist(); // save new rep
     updateAllUI();
     if(wasRunning) start();
   }
 
   function switchPhaseAuto(){
     if(state.phase==='work'){ state.phase='rest'; }
-    else { state.phase='work'; state.rep += 1; }
+    else { state.phase='work'; state.rep += 1; persist(); }
     state.elapsed=0; state.startTs=performance.now();
     runPhaseTone(); updateAllUI();
   }
@@ -560,12 +572,9 @@
   startBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggleStartPause(); });
 
   // Reset button (simple: single tap -> restart current)
-  resetBtn.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    restartCurrentPhase();
-  });
+  resetBtn.addEventListener('click', (e)=>{ e.stopPropagation(); restartCurrentPhase(); });
 
-  // ---------- Tap anywhere (multi-tap): 1x pause/resume, 2x restart current, 3x next phase ----------
+  // ---------- Anywhere taps: 1x pause/resume, 2x restart current, 3x next phase ----------
   let tapCount = 0, tapTimer = null;
   function commitTapActions(){
     const c = tapCount; tapCount=0; clearTimeout(tapTimer); tapTimer=null;
@@ -574,34 +583,38 @@
     else if(c>=3){ nextPhase(); }
   }
   timerScreen.addEventListener('pointerdown', (e)=>{
-    const interactive = e.target.closest('button, input, label, .digit, .ud button, .settings, .chip');
+    const interactive = e.target.closest('button, input, label, .digit, .ud button, .settings, .chip, .rep-btn, .fab');
     if(interactive) return; // taps on controls don't trigger
     tapCount+=1;
     if(tapTimer) clearTimeout(tapTimer);
     tapTimer=setTimeout(commitTapActions, 350);
   });
 
-  // ---------- Swipe anywhere to toggle hide/show buttons ----------
-  let swipeStartX=0, swipeStartY=0, isPointerDown=false;
-  function onPD(e){ isPointerDown=true; swipeStartX=e.clientX??(e.touches&&e.touches[0].clientX)||0; swipeStartY=e.clientY??(e.touches&&e.touches[0].clientY)||0; }
-  function onPU(e){
-    if(!isPointerDown) return; isPointerDown=false;
-    const x=(e.clientX??(e.changedTouches&&e.changedTouches[0].clientX)||0);
-    const y=(e.clientY??(e.changedTouches&&e.changedTouches[0].clientY)||0);
-    const dx=Math.abs(x-swipeStartX), dy=Math.abs(y-swipeStartY);
-    if(dx>40 || dy>40){
-      state.controlsHidden = !state.controlsHidden;
-      updateAllUI();
-    }
-  }
-  document.addEventListener('pointerdown', onPD, {passive:true});
-  document.addEventListener('pointerup', onPU, {passive:true});
-  document.addEventListener('touchstart', onPD, {passive:true});
-  document.addEventListener('touchend', onPU, {passive:true});
-
-  // FAB reveals buttons
+  // ---------- Blue ball: ONLY toggle hide/show controls ----------
   fab.addEventListener('click', ()=>{
-    state.controlsHidden=false; updateAllUI();
+    state.controlsHidden = !state.controlsHidden;
+    updateAllUI();
+  });
+
+  // ---------- REP button: always visible; tap +1, long-press reset to 1 ----------
+  let repPressTimer=null; let repPressed=false;
+  repBtn.addEventListener('pointerdown', ()=>{
+    repPressed=true;
+    repPressTimer = setTimeout(()=>{
+      if(repPressed){ state.rep=1; persist(); updateAllUI(); }
+    }, 500); // long-press
+  });
+  repBtn.addEventListener('pointerup', ()=>{
+    if(repPressTimer){ clearTimeout(repPressTimer); repPressTimer=null; }
+    if(repPressed){
+      // short tap => +1 rep (without changing phase)
+      if(state.rep>=1){ state.rep+=1; persist(); updateAllUI(); }
+    }
+    repPressed=false;
+  });
+  repBtn.addEventListener('pointerleave', ()=>{
+    repPressed=false;
+    if(repPressTimer){ clearTimeout(repPressTimer); repPressTimer=null; }
   });
 
   // PC: any key toggles start/pause (ignore when editing inputs / on settings)
@@ -649,4 +662,3 @@
 </script>
 </body>
 </html>
-
