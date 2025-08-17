@@ -6,181 +6,772 @@
 <title>Tabata Timer</title>
 <style>
   :root{
-    --bg-work:#000;
-    --bg-rest:#8b1e5d;
-    --bg-pause:#87ceeb;
+    --bg-work:#000;         /* black when WORK */
+    --bg-rest:#8b1e5d;      /* dark pink when REST (page bg, bar is red) */
+    --bg-pause:#87ceeb;     /* sky blue when PAUSED */
+    --fg:#fff;
 
-    --letters-work:#60a5fa;
-    --nums-rest:#facc15;
-    --nums-pause:#a855f7;
+    --border:#23252b;
+    --muted:rgba(255,255,255,.08);
+    --muted2:rgba(255,255,255,.04);
 
-    --work1: rgba(34,197,94,.95);
+    /* Per requirements */
+    --letters-work:#60a5fa;  /* light blue letters (work) */
+    --nums-rest:#facc15;     /* yellow numbers (rest) */
+    --nums-pause:#a855f7;    /* purple numbers (pause) */
+
+    /* Rising bar colors */
+    --work1: rgba(34,197,94,.95);  /* green */
     --work2: rgba(34,197,94,.65);
-    --rest1: rgba(239,68,68,.95);
+    --rest1: rgba(239,68,68,.95);  /* red */
     --rest2: rgba(239,68,68,.65);
 
-    --fab:#60a5fa;
+    --fab:#60a5fa;           /* floating ball color */
   }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
   body{
-    margin:0; font-family:sans-serif; text-align:center; color:white;
-    background:var(--bg-work); transition:background .2s ease;
+    margin:0; color:var(--fg);
+    font-family:Inter, ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial;
+    -webkit-tap-highlight-color:transparent;
+    background:var(--bg-work);
+    transition:background .18s ease;
   }
+
+  /* Rising background bar (behind content) */
   .progress-full{
     position:fixed; left:0; right:0; bottom:0; z-index:0;
-    background:linear-gradient(to top,var(--work1),var(--work2));
-    transition:height .2s linear;
+    height:6vh; /* starts small and rises toward full screen */
+    background:linear-gradient(to top, var(--work1), var(--work2));
+    box-shadow:0 -10px 30px rgba(34,197,94,.30);
+    pointer-events:none;
+    transition:background .12s ease, box-shadow .12s ease, height .15s linear;
   }
+
+  .app{
+    position:relative; z-index:1; max-width:820px; margin:0 auto;
+    min-height:100%; display:flex; flex-direction:column;
+    gap:10px; padding:8px 12px 92px;  /* room for footer */
+  }
+
+  /* VERY TOP: small grey Work/Rest times */
+  .meta-top{
+    display:flex; align-items:center; justify-content:flex-start; gap:10px;
+    font-size:12px; color:#bbb; opacity:.95; padding:4px 0 2px; min-height:28px;
+  }
+  .meta-top .group{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+  .meta-top .tag{background:var(--muted2); border:1px solid var(--border);
+                 border-radius:999px; padding:5px 9px}
+
+  /* Always-visible REP button (top-right) */
   .rep-btn{
-    position:fixed; top:8px; right:10px; background:#333; color:#bbb;
-    font-size:12px; padding:4px 8px; border-radius:12px; z-index:10;
+    position:fixed; top:6px; right:8px; z-index:11;
+    background:var(--muted2); color:#bbb; border:1px solid var(--border);
+    border-radius:999px; padding:6px 10px; font-size:12px; font-weight:800;
+    cursor:pointer; user-select:none;
   }
-  .meta-top{font-size:12px; color:#bbb; margin-top:8px;}
-  .pause-label{font-size:26px; font-weight:700; margin:6px 0; color:var(--nums-pause);}
-  .clock{font-size:90px; margin:10px 0;}
-  .phase{font-size:24px; margin:6px 0;}
-  .controls{margin-top:10px;}
-  .btn{font-size:20px; padding:10px 20px; margin:4px; opacity:.6;}
-  .hint{font-size:12px; color:#aaa; margin-top:4px;}
-  .footer{position:fixed; bottom:0; left:0; right:0;
-          font-size:12px; padding:6px; background:rgba(0,0,0,.4);}
+  .rep-btn:active{transform:translateY(1px)}
+
+  /* Controls/topbar row (hideable) */
+  .topbar.hideable{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap
+  }
+  .chip{
+    display:inline-flex; align-items:center; gap:8px; padding:8px 12px;
+    background:var(--muted2); border:1px solid var(--border); border-radius:999px; font-size:14px
+  }
+  .switch{position:relative; width:56px; height:32px; background:#333; border:1px solid var(--border); border-radius:999px; cursor:pointer}
+  .switch input{display:none}
+  .knob{position:absolute; top:2px; left:2px; width:28px; height:28px; border-radius:50%; background:#777; transition:all .18s ease}
+  .switch input:checked + .knob{left:26px; background:#34d399}
+  input[type="range"]{accent-color:#34d399}
+
+  /* Buttons — de-emphasized */
+  .btn{
+    appearance:none; border:1px solid var(--border);
+    background:var(--muted); color:rgba(255,255,255,.85);
+    padding:12px 16px; border-radius:14px; font-weight:800; cursor:pointer; touch-action:manipulation;
+    box-shadow:none;
+  }
+  .btn:hover{background:var(--muted2)}
+  .btn:active{transform:translateY(1px)}
+  .btn-xxl{font-size:22px; padding:14px 18px; border-radius:16px; min-width:150px}
+  .btn.disabled{opacity:.45; filter:grayscale(.2); cursor:not-allowed}
+  .btn.active{ outline:2px solid rgba(255,255,255,.12); }
+
+  /* Screens */
+  .screen{display:none}
+  .screen.active{display:block}
+
+  /* Timer layout */
+  .timer{ text-align:center; padding:0 6px}
+  .midwrap{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    min-height:56vh;   /* centered when controls hidden */
+  }
+  .pause-banner{
+    display:none; font-size:48px; font-weight:1000; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--nums-pause);
+    text-shadow:0 2px 14px rgba(0,0,0,.25);
+    margin-bottom:6px;
+  }
+  .clock{font-size:112px; font-weight:900; line-height:1; letter-spacing:.02em; margin:6px 0}
+  .phase{font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin-top:6px}
+
+  /* ACTIONS directly under the numbers (higher to avoid blue ball) */
+  .actions.hideable{
+    display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:flex-start;
+    margin-top:4px;
+  }
+  .actions .row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+  .hint{font-size:12px; opacity:.8}
+  .hint-scroll{font-size:12px; opacity:.75; margin-top:2px}
+  .controls-hidden .hint-scroll{display:none} /* hide hint in blue-ball mode */
+
+  /* Settings: compact, one screen (hideable) */
+  .settings.hideable{background:var(--muted2); border:1px solid var(--border); border-radius:14px; padding:10px 12px}
+  h2{margin:4px 0 8px; font-size:16px; text-transform:uppercase; letter-spacing:.07em}
+  .block{background:var(--muted); border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:8px}
+  .digit-grid{display:grid; grid-template-columns:repeat(4, minmax(44px,1fr)); gap:8px; max-width:360px; margin:0 auto}
+  .digit-box{display:flex; flex-direction:column; align-items:center; gap:6px}
+  .digit{
+    width:46px; height:58px; border-radius:10px; border:1px solid var(--border);
+    background:var(--muted2); display:grid; place-items:center;
+    font-size:26px; font-weight:900; color:var(--fg); cursor:pointer; user-select:none
+  }
+  .ud{display:flex; gap:6px}
+  .ud button{
+    width:46px; padding:8px 0; border-radius:10px; background:var(--muted);
+    border:1px solid var(--border); color:var(--fg); font-weight:900; font-size:18px; touch-action:manipulation
+  }
+  .dlabel{font-size:11px; opacity:.8}
+  .settings-cta{display:flex; justify-content:center; gap:10px; margin-top:6px}
+  .settings-cta .btn{padding:12px 16px; font-size:18px; border-radius:12px; min-width:140px}
+
+  @media (max-width:420px){
+    .clock{font-size:96px}
+    .btn-xxl{min-width:140px}
+    .digit{width:42px; height:54px; font-size:24px}
+    .ud button{width:42px; padding:8px 0; font-size:16px}
+    .digit-grid{max-width:330px}
+    .settings-cta .btn{min-width:128px}
+  }
+
+  /* Hideable controls toggle */
+  .controls-hidden .hideable{display:none !important;}
+
+  /* Floating light-blue ball (FAB) — left & moved up (~2cm-ish) */
   .fab{
-    position:fixed; bottom:90px; left:20px; width:48px; height:48px;
-    border-radius:50%; background:var(--fab); z-index:11;
+    position:fixed; bottom:160px; left:18px; transform:none;
+    width:64px; height:64px; border-radius:50%;
+    background:var(--fab); color:#002244;
+    display:grid; place-items:center; font-weight:900;
+    box-shadow:0 12px 24px rgba(0,0,0,.35), 0 0 0 3px rgba(255,255,255,.2) inset;
+    z-index:12; cursor:pointer; user-select:none;
   }
-  .hidden .controls, .hidden .hint{display:none;}
-  .page{min-height:100vh; display:flex; flex-direction:column;
-        align-items:center; justify-content:center; padding:20px;}
-  .instructions{font-size:18px; max-width:600px;}
+  .fab:active{transform:scale(.98)}
+  .fab .dot{font-size:26px}
+
+  /* Landscape: keep it away from center but a bit lower */
+  @media (orientation:landscape){
+    .fab{ bottom:80px; left:24px; }
+  }
+
+  /* Footer */
+  .footer{
+    position:fixed; bottom:0; left:0; right:0;
+    text-align:center; font-size:12px; opacity:.92;
+    padding:8px 6px; background:var(--muted2); z-index:5; line-height:1.25;
+  }
+
+  /* Help/Explanation page (separate screen) */
+  .helpwrap{
+    max-width:860px; margin:8px auto 120px; padding:0 8px;
+  }
+  .help{
+    background:var(--muted2); border:1px solid var(--border); border-radius:14px;
+    padding:16px;
+    font-size:14px; line-height:1.5; color:#ddd;
+  }
+  .help h3{margin:0 0 8px; font-size:18px}
+  .help ul{margin:6px 0 0 18px}
+  .help li{margin:4px 0}
+
+  /* Dynamic colors by mode */
+  body.mode-work .phase,
+  body.mode-work .meta-top{ color:var(--letters-work); }
+  body.mode-rest .clock{ color:var(--nums-rest); }
+  body.mode-pause .clock{ color:var(--nums-pause); }
+  body.mode-pause .pause-banner{ display:block; }
 </style>
 </head>
-<body>
-<div class="progress-full" id="progress"></div>
-<div class="rep-btn" id="repBtn">Rep 1</div>
+<body class="mode-work">
+  <!-- Rising background bar -->
+  <div id="progressFull" class="progress-full"></div>
 
-<div class="page main" id="mainPage">
-  <div class="meta-top">Work: 01:00 &nbsp; Rest: 00:20</div>
-  <div class="pause-label" id="pauseLabel" style="display:none;">PAUSE</div>
-  <div class="clock" id="clock">01:00</div>
-  <div class="phase" id="phase">Work</div>
-  <div class="controls" id="controls">
-    <button class="btn" id="startBtn">▶ Start / Pause</button>
-    <button class="btn" id="resetBtn">⏹ Reset</button>
+  <div class="app" id="app">
+    <!-- VERY TOP: small grey Work/Rest times -->
+    <div class="meta-top">
+      <div class="group">
+        <span class="tag">Work <b id="workGoalTop">01:00</b></span>
+        <span class="tag">Rest <b id="restGoalTop">00:20</b></span>
+      </div>
+    </div>
+
+    <!-- Always-visible REP button (top-right) -->
+    <button id="repBtn" class="rep-btn" title="Tap: +1 rep • Long-press: reset to 1">
+      Rep <b id="repVal">1</b>
+    </button>
+
+    <!-- CONTROLS BAR (hideable) -->
+    <div class="topbar hideable">
+      <div class="left">
+        <label class="chip" title="Toggle all sounds">
+          <span>Sound</span>
+          <div class="switch">
+            <input type="checkbox" id="soundToggle" checked />
+            <div class="knob"></div>
+          </div>
+        </label>
+        <label class="chip" title="Volume">
+          <span>Vol</span>
+          <input id="volume" type="range" min="0" max="100" value="70" />
+        </label>
+      </div>
+      <div class="right">
+        <button class="btn" id="openSettings" aria-label="Open settings">⚙️ Settings</button>
+      </div>
+    </div>
+
+    <!-- TIMER SCREEN (MAIN) -->
+    <section id="timerScreen" class="screen active">
+      <div class="timer" id="timerArea">
+        <div class="midwrap">
+          <div class="pause-banner" id="pauseBanner">PAUSE</div>
+          <div class="clock" id="clock">01:00</div>
+          <div class="phase" id="phase">Work</div>
+        </div>
+
+        <!-- ACTIONS directly under the numbers -->
+        <div class="actions hideable">
+          <div class="row">
+            <button id="startBtn" class="btn btn-xxl" aria-pressed="false">▶️ Start / Pause</button>
+            <button id="resetBtn" class="btn btn-xxl">⏹ Reset</button>
+          </div>
+          <div class="hint">Tap anywhere: 1× pause/resume • 2× reset current • 3× next phase</div>
+          <div class="hint">Tap the blue ball to hide/show controls</div>
+          <div class="hint-scroll">Swipe left for instructions →</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS SCREEN (auto-save; Back + Reset only) -->
+    <section id="settingsScreen" class="screen">
+      <div class="settings hideable">
+        <h2>Work</h2>
+        <div class="block" id="blockWork">
+          <div class="digit-grid" data-kind="work">
+            <div class="digit-box" data-role="mt">
+              <div class="ud"><button data-act="inc">＋</button></div>
+              <div class="digit" tabindex="0">0</div>
+              <div class="ud"><button data-act="dec">－</button></div>
+              <div class="dlabel">Min (tens)</div>
+            </div>
+            <div class="digit-box" data-role="mo">
+              <div class="ud"><button data-act="inc">＋</button></div>
+              <div class="digit" tabindex="0">1</div>
+              <div class="ud"><button data-act="dec">－</button></div>
+              <div class="dlabel">Min (ones)</div>
+            </div>
+            <div class="digit-box" data-role="st">
+              <div class="ud"><button data-act="inc">＋</button></div>
+              <div class="digit" tabindex="0">0</div>
+              <div class="ud"><button data-act="dec">－</button></div>
+              <div class="dlabel">Sec (tens)</div>
+            </div>
+            <div class="digit-box" data-role="so">
+              <div class="ud"><button data-act="inc">＋</button></div>
+              <div class="digit" tabindex="0">0</div>
+              <div class="ud"><button data-act="dec">－</button></div>
+              <div class="dlabel">Sec (ones)</div>
+            </div>
+          </div>
+        </div>
+
+        <h2>Rest</h2>
+        <div class="block" id="blockRest">
+          <div class="digit-grid" data-kind="rest">
+            <div class="digit-box" data-role="mt">
+              <div class="ud"><button data-act="inc">＋</button></div>
+              <div class="digit" tabindex="0">0</div>
+              <div class="ud"><button data-act="dec">－</button></div>
+              <div class="dlabel">Min (tens)</div>
+            </div>
+            <div class="digit-box" data-role="mo">
+              <div class="ud"><button data-act="inc">＋</button></div>
+              <div class="digit" tabindex="0">0</div>
+              <div class="ud"><button data-act="dec">－</button></div>
+              <div class="dlabel">Min (ones)</div>
+            </div>
+            <div class="digit-box" data-role="st">
+              <div class="ud"><button data-act="inc">＋</button></div>
+              <div class="digit" tabindex="0">2</div>
+              <div class="ud"><button data-act="dec">－</button></div>
+              <div class="dlabel">Sec (tens)</div>
+            </div>
+            <div class="digit-box" data-role="so">
+              <div class="ud"><button data-act="inc">＋</button></div>
+              <div class="digit" tabindex="0">0</div>
+              <div class="ud"><button data-act="dec">－</button></div>
+              <div class="dlabel">Sec (ones)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-cta">
+          <button class="btn" id="backToTimer">↩️ Back</button>
+          <button class="btn" id="settingsReset">⏹ Reset</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- HELP / INSTRUCTIONS (separate screen; swipe left to open) -->
+    <section id="helpScreen" class="screen">
+      <div class="helpwrap">
+        <div class="help">
+          <h3>How it works</h3>
+          <ul>
+            <li><b>Tap anywhere</b> on the timer:
+              <ul>
+                <li>1× = Start / Pause / Resume</li>
+                <li>2× = Reset current phase to start</li>
+                <li>3× = Next phase (Work↔Rest), rep +1 when leaving Rest</li>
+              </ul>
+            </li>
+            <li><b>Swipe left</b> on main screen to open this page.</li>
+            <li><b>Swipe right</b> (or left again) to return to the main timer.</li>
+            <li><b>Blue ball</b> (left): tap to hide/show controls.</li>
+            <li>Defaults: <b>Work 1:00</b>, <b>Rest 0:20</b>.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
   </div>
-  <div class="hint" id="hint">Swipe left for instructions →</div>
-</div>
 
-<div class="page" id="instructionsPage" style="display:none;">
-  <div class="instructions">
-    <h2>How it works</h2>
-    <p>• Tap anywhere to Start / Pause / Resume.<br>
-       • Double tap → Restart current phase.<br>
-       • Triple tap → Next phase.<br>
-       • Blue ball toggles controls.<br>
-       • Swipe left = show this page.<br>
-       • Swipe right = return to timer.</p>
-  </div>
-</div>
+  <!-- Floating light-blue ball to hide/show controls -->
+  <div class="fab" id="fab" title="Hide/show controls"><span class="dot">●</span></div>
 
-<div class="fab" id="fab"></div>
-<div class="footer">Jimmy James - 17.08.2025 - 11:55 - v. 1.08</div>
+  <!-- FOOTER -->
+  <div class="footer">Jimmy James - 17.08.2025 - 11:55 - v. 1.08</div>
 
 <script>
-let work=60, rest=20;
-let phase='work', rep=1;
-let running=false, start=0, elapsed=0;
-let raf=null, taps=0, tapTimer=null;
-let blueMode=false;
+  // ---------- Utilities ----------
+  const el = id => document.getElementById(id);
+  const qs = (s, r=document) => r.querySelector(s);
+  const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
+  const clamp = (v,min,max) => Math.min(max, Math.max(min, v));
+  const pad = n => String(n).padStart(2,'0');
+  const fmt = secs => pad(Math.floor(secs/60))+':'+pad(secs%60);
 
-const clockEl=document.getElementById('clock');
-const phaseEl=document.getElementById('phase');
-const progress=document.getElementById('progress');
-const repBtn=document.getElementById('repBtn');
-const startBtn=document.getElementById('startBtn');
-const resetBtn=document.getElementById('resetBtn');
-const pauseLabel=document.getElementById('pauseLabel');
-const mainPage=document.getElementById('mainPage');
-const instrPage=document.getElementById('instructionsPage');
-const hint=document.getElementById('hint');
+  // ---------- State ----------
+  const state = {
+    work: 60, rest: 20,     // DEFAULTS: 1:00 / 0:20
+    phase: 'work',          // 'work' | 'rest'
+    running: false,
+    startTs: 0,             // phase start timestamp
+    elapsed: 0,             // elapsed within current phase (sec, float)
+    rep: 1,
+    muted: false,
+    volume: 0.7,
+    controlsHidden: false
+  };
 
-function fmt(s){let m=Math.floor(s/60), ss=s%60;
- return String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');}
-
-function update(){
-  let total=phase==='work'?work:rest;
-  let left=Math.max(0,total-Math.floor(elapsed));
-  clockEl.textContent=fmt(left);
-  phaseEl.textContent=phase==='work'?'Work':'Rest';
-  repBtn.textContent='Rep '+rep;
-
-  if(running){
-    pauseLabel.style.display='none';
-    document.body.style.background=phase==='work'?'var(--bg-work)':'var(--bg-rest)';
-  } else {
-    pauseLabel.style.display='block';
-    document.body.style.background='var(--bg-pause)';
+  // ---------- Persistence ----------
+  (function load(){
+    try{
+      const saved = JSON.parse(localStorage.getItem('tabata_v25')||'{}');
+      if(Number.isFinite(saved.work)) state.work = saved.work;
+      if(Number.isFinite(saved.rest)) state.rest = saved.rest;
+      if(typeof saved.muted==='boolean') state.muted = saved.muted;
+      if(Number.isFinite(saved.volume)) state.volume = saved.volume;
+      if(typeof saved.rep==='number') state.rep = Math.max(1, Math.floor(saved.rep));
+      if(typeof saved.controlsHidden==='boolean') state.controlsHidden = saved.controlsHidden;
+    }catch{}
+  })();
+  function persist(){
+    localStorage.setItem('tabata_v25', JSON.stringify({
+      work:state.work, rest:state.rest, muted:state.muted, volume:state.volume, rep:state.rep, controlsHidden:state.controlsHidden
+    }));
   }
-  if(phase==='work'){
-    clockEl.style.color='var(--letters-work)';
-    progress.style.background='linear-gradient(to top,var(--work1),var(--work2))';
-    // Work: grow upward from bottom
-    let frac=elapsed/(total||1);
-    progress.style.height=(Math.max(6, frac*100))+'vh';
-  } else {
-    clockEl.style.color='var(--nums-rest)';
-    progress.style.background='linear-gradient(to top,var(--rest1),var(--rest2))';
-    // Rest: shrink from full
-    let frac=(total - elapsed)/(total||1);
-    progress.style.height=(Math.max(6, frac*100))+'vh';
-  }
-  if(!running) clockEl.style.color='var(--nums-pause)';
-}
-function loop(){
-  if(!running) return;
-  elapsed=(Date.now()-start)/1000;
-  let total=phase==='work'?work:rest;
-  if(elapsed>=total){ nextPhase(); }
-  update(); raf=requestAnimationFrame(loop);
-}
-function toggle(){running?pause():start();}
-function start(){running=true; start=Date.now()-elapsed*1000; loop();}
-function pause(){running=false; if(raf) cancelAnimationFrame(raf); update();}
-function nextPhase(){phase=phase==='work'?'rest':'work'; if(phase==='work') rep++; elapsed=0; start=Date.now(); update();}
-function restartPhase(){elapsed=0; start=Date.now(); update();}
-function triple(){nextPhase();}
-function handleTap(){
-  taps++; if(tapTimer) clearTimeout(tapTimer);
-  tapTimer=setTimeout(()=>{
-    if(taps===1) toggle();
-    if(taps===2) restartPhase();
-    if(taps===3) triple();
-    taps=0;
-  },300);
-}
-document.body.addEventListener('click',e=>{
-  if(e.target.closest('.btn')||e.target.closest('.fab')||e.target.closest('.rep-btn')) return;
-  handleTap();
-});
-startBtn.onclick=toggle;
-resetBtn.onclick=()=>restartPhase();
-repBtn.onclick=()=>rep++;
-update();
 
-// swipe left/right for instructions
-let startX=0;
-document.addEventListener('touchstart',e=>{startX=e.touches[0].clientX;});
-document.addEventListener('touchend',e=>{
-  let dx=e.changedTouches[0].clientX-startX;
-  if(Math.abs(dx)>50){
-    if(dx<0){mainPage.style.display='none'; instrPage.style.display='flex';}
-    else{mainPage.style.display='flex'; instrPage.style.display='none';}
+  // ---------- Elements ----------
+  const app = el('app');
+  const timerScreen = el('timerScreen');
+  const settingsScreen = el('settingsScreen');
+  const helpScreen = el('helpScreen');
+
+  const pauseBanner = el('pauseBanner');
+  const phaseEl = el('phase');
+  const clockEl = el('clock');
+  const repBtn = el('repBtn');
+  const repVal = el('repVal');
+
+  const workGoalTopEl = el('workGoalTop');
+  const restGoalTopEl = el('restGoalTop');
+
+  const progressFull = el('progressFull');
+
+  const soundToggle = el('soundToggle');
+  const volumeInput = el('volume');
+  const startBtn = el('startBtn');
+  const resetBtn = el('resetBtn');
+  const fab = el('fab');
+
+  // ---------- Topbar ----------
+  soundToggle.checked = !state.muted;
+  volumeInput.value = Math.round(state.volume*100);
+  soundToggle.addEventListener('change', ()=>{ state.muted = !soundToggle.checked; persist(); });
+  volumeInput.addEventListener('input', ()=>{ state.volume = clamp(+volumeInput.value/100,0,1); persist(); });
+
+  // ---------- Nav ----------
+  el('openSettings').addEventListener('click', openSettings);
+  el('backToTimer').addEventListener('click', ()=> showScreen('timer'));
+  el('settingsReset').addEventListener('click', ()=>{
+    pause();
+    state.work = 0; state.rest = 0;
+    persist();
+    populateDigits('work', state.work);
+    populateDigits('rest', state.rest);
+    updateMetaTop();
+    updateStartEnabled();
+    updateAllUI();
+  });
+
+  function showScreen(which){
+    // timer | settings | help
+    if(which==='settings'){
+      settingsScreen.classList.add('active');
+      timerScreen.classList.remove('active');
+      helpScreen.classList.remove('active');
+    } else if(which==='help'){
+      helpScreen.classList.add('active');
+      timerScreen.classList.remove('active');
+      settingsScreen.classList.remove('active');
+    } else {
+      timerScreen.classList.add('active');
+      settingsScreen.classList.remove('active');
+      helpScreen.classList.remove('active');
+    }
   }
-});
-function toggleBlue(){
-  blueMode=!blueMode;
-  mainPage.classList.toggle('hidden',blueMode);
-  hint.style.display=blueMode?'none':'block';
-}
-document.getElementById('fab').onclick=toggleBlue;
+  function openSettings(){
+    pause(); showScreen('settings');
+    populateDigits('work', state.work);
+    populateDigits('rest', state.rest);
+  }
+
+  // ---------- Helpers ----------
+  function secsToParts(s){ s=Math.max(0,Math.round(s)); return {m:Math.floor(s/60), s:s%60}; }
+  function partsToSecs(mt,mo,st,so){ let m=mt*10+mo, sec=st*10+so; m=clamp(m,0,59); sec=clamp(sec,0,59); return m*60+sec; }
+
+  function updateMetaTop(){
+    const wp=secsToParts(state.work), rp=secsToParts(state.rest);
+    workGoalTopEl.textContent = pad(wp.m)+':'+pad(wp.s);
+    restGoalTopEl.textContent = pad(rp.m)+':'+pad(rp.s);
+    repBtn.textContent = 'Rep '+state.rep;
+  }
+
+  function updateStartEnabled(){
+    const allow = (state.work>0 || state.rest>0);
+    startBtn.classList.toggle('disabled', !allow);
+    startBtn.disabled = !allow;
+  }
+
+  function currentTotal(){ return state.phase==='work' ? state.work : state.rest; }
+  function remainingSeconds(){
+    const total = currentTotal();
+    const rem = Math.max(0, Math.round(total - state.elapsed));
+    return rem;
+  }
+
+  function setModeClasses(){
+    document.body.classList.remove('mode-work','mode-rest','mode-pause');
+    if(!state.running && state.elapsed>0){
+      document.body.classList.add('mode-pause'); document.body.style.background='var(--bg-pause)';
+      pauseBanner.style.display = 'block';
+    } else {
+      pauseBanner.style.display = 'none';
+      if(state.phase==='rest'){
+        document.body.classList.add('mode-rest'); document.body.style.background='var(--bg-rest)';
+      } else {
+        document.body.classList.add('mode-work'); document.body.style.background='var(--bg-work)';
+      }
+    }
+  }
+
+  function updateProgressAndBackground(){
+    const total = currentTotal();
+    const frac = total>0 ? Math.min(state.elapsed/total, 1) : 1;   // RISE from bottom (both phases)
+    const minVH = 6;
+    progressFull.style.height = (Math.max(minVH, frac*100)).toFixed(2)+'vh';
+
+    if(state.phase==='work'){
+      progressFull.style.background = 'linear-gradient(to top, var(--work1), var(--work2))';
+      progressFull.style.boxShadow = '0 -10px 30px rgba(34,197,94,.35)';
+    } else {
+      progressFull.style.background = 'linear-gradient(to top, var(--rest1), var(--rest2))';
+      progressFull.style.boxShadow = '0 -10px 30px rgba(239,68,68,.35)';
+    }
+  }
+
+  function updateAllUI(){
+    phaseEl.textContent = state.phase==='work'?'Work':'Rest';
+    // number colors
+    if(!state.running && state.elapsed>0){
+      clockEl.style.color = 'var(--nums-pause)';
+    } else if(state.phase==='rest'){
+      clockEl.style.color = 'var(--nums-rest)';
+    } else {
+      clockEl.style.color = 'var(--letters-work)';
+    }
+
+    clockEl.textContent = fmt(remainingSeconds());
+    updateMetaTop();
+    updateProgressAndBackground();
+    setModeClasses();
+    startBtn.classList.toggle('active', state.running);
+    startBtn.setAttribute('aria-pressed', String(state.running));
+    app.classList.toggle('controls-hidden', state.controlsHidden);
+  }
+
+  // init
+  updateMetaTop(); updateStartEnabled(); updateAllUI();
+
+  // ---------- Digit editor (auto-save) ----------
+  function populateDigits(kind, secs){
+    const grid = qs(`.digit-grid[data-kind="${kind}"]`);
+    const {m,s} = secsToParts(secs);
+    const mt=Math.floor(m/10), mo=m%10, st=Math.floor(s/10), so=s%10;
+    const map={mt,mo,st,so};
+    qsa('.digit-box', grid).forEach(box=>{ qs('.digit',box).textContent = map[box.dataset.role]; });
+  }
+  function readDigits(kind){
+    const grid = qs(`.digit-grid[data-kind="${kind}"]`);
+    const mt=+qs('[data-role="mt"] .digit',grid).textContent;
+    const mo=+qs('[data-role="mo"] .digit',grid).textContent;
+    const st=+qs('[data-role="st"] .digit',grid).textContent;
+    const so=+qs('[data-role="so"] .digit',grid).textContent;
+    return partsToSecs(mt,mo,st,so);
+  }
+  function commitDigits(kind){
+    const secs = readDigits(kind);
+    if(kind==='work') state.work = secs; else state.rest = secs;
+    persist(); updateMetaTop(); updateStartEnabled(); updateAllUI();
+  }
+  qsa('.digit-grid').forEach(grid=>{
+    grid.addEventListener('click', (e)=>{
+      const box = e.target.closest('.digit-box'); if(!box) return;
+      const digitEl = qs('.digit', box);
+
+      if(e.target===digitEl){
+        const v = prompt('Enter a digit (0–9):', digitEl.textContent);
+        if(v==null) return; const d = Number(v.trim());
+        if(Number.isInteger(d) && d>=0 && d<=9){
+          const role = box.dataset.role;
+          const max=(role==='mt'||role==='st')?5:9;
+          digitEl.textContent = String(Math.min(d,max));
+          commitDigits(grid.dataset.kind);
+        }
+      }
+      const actBtn = e.target.closest('button[data-act]');
+      if(actBtn){
+        const role = box.dataset.role; let cur=+digitEl.textContent; const inc=actBtn.dataset.act==='inc';
+        const max=(role==='mt'||role==='st')?5:9, min=0;
+        cur = inc?cur+1:cur-1; if(cur>max)cur=min; if(cur<min)cur=max;
+        digitEl.textContent=String(cur);
+        commitDigits(grid.dataset.kind);
+      }
+    });
+  });
+
+  // ---------- Timer engine (COUNTS DOWN) ----------
+  let rafId=null;
+
+  function ensureAudio(){
+    if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+    if(audioCtx.state==='suspended'){ audioCtx.resume(); }
+  }
+  function start(){
+    if(!(state.work>0 || state.rest>0)) return;
+    if(state.running) return;
+    ensureAudio();
+    state.running=true;
+    state.startTs = performance.now() - state.elapsed*1000; // continue where left
+    if(state.elapsed===0){ runPhaseTone(); }
+    loop();
+    updateAllUI();
+  }
+  function pause(){
+    state.running=false;
+    if(rafId) cancelAnimationFrame(rafId);
+    rafId=null;
+    updateAllUI();
+  }
+  function toggleStartPause(){ state.running ? pause() : start(); }
+
+  function restartCurrentPhase(){
+    const wasRunning=state.running;
+    pause();
+    state.elapsed=0;
+    state.startTs = performance.now();
+    runPhaseTone();
+    updateAllUI();
+    if(wasRunning) start();
+  }
+  function nextPhase(){
+    const wasRunning=state.running;
+    pause();
+    if(state.phase==='work'){ state.phase='rest'; }
+    else { state.phase='work'; state.rep += 1; }
+    state.elapsed=0;
+    state.startTs = performance.now();
+    runPhaseTone();
+    persist(); updateAllUI();
+    if(wasRunning) start();
+  }
+  function switchPhaseAuto(){
+    if(state.phase==='work'){ state.phase='rest'; }
+    else { state.phase='work'; state.rep += 1; persist(); }
+    state.elapsed=0; state.startTs=performance.now();
+    runPhaseTone(); updateAllUI();
+  }
+
+  function loop(){
+    if(!state.running) return;
+    const total = currentTotal();
+    const now = performance.now();
+    state.elapsed = Math.max(0, (now - state.startTs)/1000);
+    if(state.elapsed >= total){ switchPhaseAuto(); }
+    updateAllUI();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  // Buttons
+  startBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggleStartPause(); });
+  resetBtn.addEventListener('click', (e)=>{ e.stopPropagation(); restartCurrentPhase(); });
+
+  // ---------- Anywhere taps: 1x pause/resume, 2x restart current, 3x next phase ----------
+  let tapCount = 0, tapTimer = null;
+  function commitTapActions(){
+    const c = tapCount; tapCount=0; clearTimeout(tapTimer); tapTimer=null;
+    if(c===1){ toggleStartPause(); }
+    else if(c===2){ restartCurrentPhase(); }
+    else if(c>=3){ nextPhase(); }
+  }
+  timerScreen.addEventListener('pointerdown', (e)=>{
+    const interactive = e.target.closest('button, input, label, .digit, .ud button, .settings, .chip, .rep-btn, .fab');
+    if(interactive) return;
+    tapCount+=1;
+    if(tapTimer) clearTimeout(tapTimer);
+    tapTimer=setTimeout(commitTapActions, 350);
+  });
+
+  // ---------- Swipe LEFT to help; swipe RIGHT (or LEFT again) to return ----------
+  let swipeStartX=0, isPointerDown=false;
+  function onPD(e){
+    isPointerDown=true;
+    const t = e.touches ? e.touches[0] : e;
+    swipeStartX = t.clientX||0;
+  }
+  function onPU(e){
+    if(!isPointerDown) return; isPointerDown=false;
+    const t = e.changedTouches ? e.changedTouches[0] : e;
+    const dx=(t.clientX||0)-swipeStartX;
+    const adx=Math.abs(dx);
+
+    // LEFT from main -> help
+    if(timerScreen.classList.contains('active') && adx>50 && dx<0){ showScreen('help'); return; }
+    // RIGHT (or LEFT again) from help -> main
+    if(helpScreen.classList.contains('active') && adx>50){ showScreen('timer'); return; }
+  }
+  document.addEventListener('pointerdown', onPD, {passive:true});
+  document.addEventListener('pointerup', onPU, {passive:true});
+  document.addEventListener('touchstart', onPD, {passive:true});
+  document.addEventListener('touchend', onPU, {passive:true});
+
+  // Blue ball toggles controls (only method to hide/show)
+  fab.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    state.controlsHidden = !state.controlsHidden;
+    persist();
+    updateAllUI();
+  });
+
+  // ---------- REP button ----------
+  let repPressTimer=null; let repPressed=false;
+  repBtn.addEventListener('pointerdown', ()=>{
+    repPressed=true;
+    repPressTimer = setTimeout(()=>{
+      if(repPressed){ state.rep=1; persist(); updateAllUI(); }
+    }, 500); // long-press
+  });
+  repBtn.addEventListener('pointerup', ()=>{
+    if(repPressTimer){ clearTimeout(repPressTimer); repPressTimer=null; }
+    if(repPressed){
+      if(state.rep>=1){ state.rep+=1; persist(); updateAllUI(); }
+    }
+    repPressed=false;
+  });
+  repBtn.addEventListener('pointerleave', ()=>{
+    repPressed=false;
+    if(repPressTimer){ clearTimeout(repPressTimer); repPressTimer=null; }
+  });
+
+  // PC: any key toggles start/pause (ignore when editing inputs / on settings/help)
+  document.addEventListener('keydown', (e)=>{
+    const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+    if(tag==='INPUT' || tag==='TEXTAREA' || e.target.isContentEditable) return;
+    if(settingsScreen.classList.contains('active') || helpScreen.classList.contains('active')) return;
+    toggleStartPause();
+  });
+
+  // ---------- Audio ----------
+  const HALF_OCT = Math.SQRT2;
+  let audioCtx=null;
+
+  function beep(freq=440, dur=0.3, t0){
+    if(state.muted) return 0;
+    if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+    const ctx=audioCtx;
+    if(ctx.state==='suspended') ctx.resume();
+    const now = t0 ?? ctx.currentTime;
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+    osc.type='sine';
+    osc.frequency.value=freq;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(state.volume*0.75, now+0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now+dur+0.02);
+    return dur;
+  }
+  // Work start: 0.5s ~622 Hz
+  function workTone(){
+    const base = 440 * HALF_OCT;
+    beep(base, 0.5);
+  }
+  // Rest start: 0.3s ~1108 Hz then 0.3s ~739 Hz
+  function restTone(){
+    const start = audioCtx ? audioCtx.currentTime : 0;
+    const hi = 784 * HALF_OCT;
+    const lo = 523 * HALF_OCT;
+    const d1 = beep(hi, 0.3, start || undefined);
+    beep(lo, 0.3, (start||0) + d1 + 0.06);
+  }
+  function runPhaseTone(){ if(state.muted) return; (state.phase==='work') ? workTone() : restTone(); }
 </script>
 </body>
 </html>
+
