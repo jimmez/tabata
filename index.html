@@ -6,16 +6,16 @@
 <title>Tabata Timer</title>
 <style>
   :root{
-    --bg-work:#000000;       /* black when WORK */
-    --bg-rest:#8b1e5d;       /* dark pink when REST */
-    --bg-pause:#87ceeb;      /* sky blue when PAUSED */
-    --fg:#ffffff;
+    --bg-work:#000;         /* black when WORK */
+    --bg-rest:#8b1e5d;      /* dark pink when REST */
+    --bg-pause:#87ceeb;     /* sky blue when PAUSED */
+    --fg:#fff;
 
     --border:#23252b;
     --muted:rgba(255,255,255,.08);
     --muted2:rgba(255,255,255,.04);
 
-    /* Colors per requirement */
+    /* Per requirements */
     --letters-work:#60a5fa;  /* light blue letters (work) */
     --nums-rest:#facc15;     /* yellow numbers (rest) */
     --nums-pause:#a855f7;    /* purple numbers (pause) */
@@ -52,13 +52,13 @@
   .app{
     position:relative; z-index:1; max-width:820px; margin:0 auto;
     min-height:100%; display:flex; flex-direction:column;
-    gap:10px; padding:8px 12px 92px; /* bottom space for footer */
+    gap:10px; padding:8px 12px 92px;  /* room for footer */
   }
 
-  /* VERY TOP: small grey Work/Rest times (rep moved to fixed button) */
+  /* VERY TOP: small grey Work/Rest times */
   .meta-top{
     display:flex; align-items:center; justify-content:flex-start; gap:10px;
-    font-size:12px; color:#bbbbbb; opacity:.95; padding:4px 0 2px; min-height:28px;
+    font-size:12px; color:#bbb; opacity:.95; padding:4px 0 2px; min-height:28px;
   }
   .meta-top .group{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
   .meta-top .tag{background:var(--muted2); border:1px solid var(--border);
@@ -67,7 +67,7 @@
   /* Always-visible REP button (top-right) */
   .rep-btn{
     position:fixed; top:6px; right:8px; z-index:11;
-    background:var(--muted2); color:#bbbbbb; border:1px solid var(--border);
+    background:var(--muted2); color:#bbb; border:1px solid var(--border);
     border-radius:999px; padding:6px 10px; font-size:12px; font-weight:800;
     cursor:pointer; user-select:none;
   }
@@ -87,7 +87,7 @@
   .switch input:checked + .knob{left:26px; background:#34d399}
   input[type="range"]{accent-color:#34d399}
 
-  /* Buttons — visually de-emphasized */
+  /* Buttons — de-emphasized */
   .btn{
     appearance:none; border:1px solid var(--border);
     background:var(--muted); color:rgba(255,255,255,.85);
@@ -105,13 +105,20 @@
   .screen.active{display:block}
 
   /* Timer layout */
-  .timer{ text-align:center; padding:6px 6px}
+  .timer{ text-align:center; padding:0 6px}
   .phase{font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin-top:2px}
   .midwrap{
-    min-height:56vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    min-height:56vh;   /* centered when controls hidden */
   }
+  /* When controls are visible (blue-ball OFF), shrink center area so buttons sit higher */
+  .app:not(.controls-hidden) .midwrap{ min-height:44vh; }
+
   .clock{font-size:112px; font-weight:900; line-height:1; letter-spacing:.02em; margin:6px 0}
-  .cta.hideable{display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:center; margin-top:6px}
+  .cta.hideable{
+    display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:flex-start;
+    margin-top:2px; padding-top:0;
+  }
   .row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
   .hint{font-size:12px; opacity:.8}
 
@@ -166,6 +173,17 @@
     padding:8px 6px; background:var(--muted2); z-index:5; line-height:1.25;
   }
 
+  /* Help/Explanation section */
+  .help{
+    margin:14px 0 120px;
+    background:var(--muted2); border:1px solid var(--border); border-radius:14px;
+    padding:14px;
+    font-size:14px; line-height:1.5; color:#ddd;
+  }
+  .help h3{margin:0 0 8px; font-size:16px}
+  .help ul{margin:6px 0 0 18px}
+  .help li{margin:4px 0}
+
   /* Dynamic colors by mode */
   body.mode-work .phase,
   body.mode-work .meta-top{ color:var(--letters-work); }
@@ -219,12 +237,13 @@
           <div class="clock" id="clock">01:00</div>
         </div>
 
+        <!-- Buttons now appear higher (because midwrap is shorter when visible) -->
         <div class="cta hideable">
           <div class="row">
             <button id="startBtn" class="btn btn-xxl" aria-pressed="false">▶️ Start / Pause</button>
             <button id="resetBtn" class="btn btn-xxl">⏹ Reset</button>
           </div>
-          <div class="row"><div class="hint">Tap anywhere: 1× pause/resume · 2× reset current · 3× next phase</div></div>
+          <div class="row"><div class="hint">Tap anywhere: 1× pause/resume • 2× reset current • 3× next phase</div></div>
           <div class="row"><div class="hint">Swipe anywhere or tap the blue ball to hide/show controls</div></div>
         </div>
       </div>
@@ -299,6 +318,25 @@
         </div>
       </div>
     </section>
+
+    <!-- EXPLANATION / HELP (scroll down to view) -->
+    <section class="help">
+      <h3>How it works</h3>
+      <ul>
+        <li><b>Tap anywhere</b> on the timer screen:
+          <ul>
+            <li>1× = Start / Pause / Resume</li>
+            <li>2× = Reset current phase to its start</li>
+            <li>3× = Next phase (Work↔Rest), rep +1 when leaving Rest</li>
+          </ul>
+        </li>
+        <li><b>Blue ball</b> (bottom center): tap to hide/show controls.</li>
+        <li><b>Swipe anywhere</b>: also hides/shows controls (blue-ball mode).</li>
+        <li><b>Work</b> mode: labels are light blue; <b>Rest</b> mode: numbers are yellow; <b>Paused</b>: numbers are purple.</li>
+        <li><b>Rep</b> (top-right): tap +1; long-press resets to 1.</li>
+        <li>Open <b>Settings</b> to set Work/Rest (per-digit +/– or tap digits to type). Changes auto-save.</li>
+      </ul>
+    </section>
   </div>
 
   <!-- Floating light-blue ball to hide/show controls -->
@@ -318,7 +356,7 @@
 
   // ---------- State ----------
   const state = {
-    work: 60, rest: 20,     // DEFAULTS: 1:00 work, 0:20 rest
+    work: 60, rest: 20,     // DEFAULTS: 1:00 / 0:20
     phase: 'work',          // 'work' | 'rest'
     running: false,
     startTs: 0,             // phase start timestamp
@@ -332,7 +370,7 @@
   // ---------- Persistence ----------
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v20')||'{}');
+      const saved = JSON.parse(localStorage.getItem('tabata_v21')||'{}');
       if(Number.isFinite(saved.work)) state.work = saved.work;
       if(Number.isFinite(saved.rest)) state.rest = saved.rest;
       if(typeof saved.muted==='boolean') state.muted = saved.muted;
@@ -341,7 +379,7 @@
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v20', JSON.stringify({
+    localStorage.setItem('tabata_v21', JSON.stringify({
       work:state.work, rest:state.rest, muted:state.muted, volume:state.volume, rep:state.rep
     }));
   }
@@ -434,7 +472,6 @@
     const minVH = 6;
     progressFull.style.height = (Math.max(minVH, frac*100)).toFixed(2)+'vh';
 
-    // Bar colors by phase
     if(state.phase==='work'){
       progressFull.style.background = 'linear-gradient(to top, var(--work1), var(--work2))';
       progressFull.style.boxShadow = '0 -10px 30px rgba(34,197,94,.35)';
@@ -484,7 +521,6 @@
       const box = e.target.closest('.digit-box'); if(!box) return;
       const digitEl = qs('.digit', box);
 
-      // tap digit to type 0–9
       if(e.target===digitEl){
         const v = prompt('Enter a digit (0–9):', digitEl.textContent);
         if(v==null) return; const d = Number(v.trim());
@@ -495,7 +531,6 @@
           commitDigits(grid.dataset.kind);
         }
       }
-      // + / – per digit
       const actBtn = e.target.closest('button[data-act]');
       if(actBtn){
         const role = box.dataset.role; let cur=+digitEl.textContent; const inc=actBtn.dataset.act==='inc';
@@ -515,12 +550,12 @@
     if(audioCtx.state==='suspended'){ audioCtx.resume(); }
   }
   function start(){
-    if(!(state.work>0 || state.rest>0)) return; // disallow start if both zero
+    if(!(state.work>0 || state.rest>0)) return;
     if(state.running) return;
     ensureAudio();
     state.running=true;
-    state.startTs = performance.now() - state.elapsed*1000; // elapsed continues
-    if(state.elapsed===0){ runPhaseTone(); } // tone at phase start
+    state.startTs = performance.now() - state.elapsed*1000; // continue where left
+    if(state.elapsed===0){ runPhaseTone(); }
     loop();
     updateAllUI();
   }
@@ -532,7 +567,6 @@
   }
   function toggleStartPause(){ state.running ? pause() : start(); }
 
-  // Restart current phase (back to full time)
   function restartCurrentPhase(){
     const wasRunning=state.running;
     pause();
@@ -542,7 +576,6 @@
     updateAllUI();
     if(wasRunning) start();
   }
-  // Next phase (Work→Rest; Rest→Work+rep++)
   function nextPhase(){
     const wasRunning=state.running;
     pause();
@@ -551,11 +584,9 @@
     state.elapsed=0;
     state.startTs = performance.now();
     runPhaseTone();
-    persist(); // save new rep
-    updateAllUI();
+    persist(); updateAllUI();
     if(wasRunning) start();
   }
-
   function switchPhaseAuto(){
     if(state.phase==='work'){ state.phase='rest'; }
     else { state.phase='work'; state.rep += 1; persist(); }
@@ -580,7 +611,7 @@
   // ---------- Anywhere taps: 1x pause/resume, 2x restart current, 3x next phase ----------
   let tapCount = 0, tapTimer = null, didSwipe=false;
   function commitTapActions(){
-    if(didSwipe){ didSwipe=false; return; } // ignore taps if this was a swipe
+    if(didSwipe){ didSwipe=false; return; }
     const c = tapCount; tapCount=0; clearTimeout(tapTimer); tapTimer=null;
     if(c===1){ toggleStartPause(); }
     else if(c===2){ restartCurrentPhase(); }
@@ -588,7 +619,7 @@
   }
   timerScreen.addEventListener('pointerdown', (e)=>{
     const interactive = e.target.closest('button, input, label, .digit, .ud button, .settings, .chip, .rep-btn, .fab');
-    if(interactive) return; // taps on controls don't trigger
+    if(interactive) return;
     tapCount+=1;
     if(tapTimer) clearTimeout(tapTimer);
     tapTimer=setTimeout(commitTapActions, 350);
@@ -606,7 +637,7 @@
     const t = e.changedTouches ? e.changedTouches[0] : e;
     const dx=Math.abs((t.clientX||0)-swipeStartX), dy=Math.abs((t.clientY||0)-swipeStartY);
     if(dx>40 || dy>40){
-      didSwipe=true; // cancel tap handling
+      didSwipe=true;
       state.controlsHidden = !state.controlsHidden;
       updateAllUI();
       if(tapTimer){ clearTimeout(tapTimer); tapTimer=null; tapCount=0; }
@@ -624,7 +655,7 @@
     updateAllUI();
   });
 
-  // ---------- REP button: always visible; tap +1, long-press reset to 1 ----------
+  // ---------- REP button ----------
   let repPressTimer=null; let repPressed=false;
   repBtn.addEventListener('pointerdown', ()=>{
     repPressed=true;
@@ -635,7 +666,6 @@
   repBtn.addEventListener('pointerup', ()=>{
     if(repPressTimer){ clearTimeout(repPressTimer); repPressTimer=null; }
     if(repPressed){
-      // short tap => +1 rep (without changing phase)
       if(state.rep>=1){ state.rep+=1; persist(); updateAllUI(); }
     }
     repPressed=false;
