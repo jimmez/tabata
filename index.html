@@ -155,9 +155,9 @@
   /* Hideable controls toggle */
   .controls-hidden .hideable{display:none !important;}
 
-  /* Floating light-blue ball (FAB) — left & lower so it never blocks numbers */
+  /* Floating light-blue ball (FAB) — left & moved up ~2cm */
   .fab{
-    position:fixed; bottom:84px; left:18px; transform:none;
+    position:fixed; bottom:160px; left:18px; transform:none; /* was ~84px, now higher */
     width:64px; height:64px; border-radius:50%;
     background:var(--fab); color:#002244;
     display:grid; place-items:center; font-weight:900;
@@ -167,9 +167,9 @@
   .fab:active{transform:scale(.98)}
   .fab .dot{font-size:26px}
 
-  /* Landscape: push the ball even further away from center */
+  /* Landscape: still keep it away from the numbers but lower than portrait */
   @media (orientation:landscape){
-    .fab{ bottom:24px; left:24px; }
+    .fab{ bottom:80px; left:24px; }
   }
 
   /* Footer */
@@ -179,14 +179,16 @@
     padding:8px 6px; background:var(--muted2); z-index:5; line-height:1.25;
   }
 
-  /* Help/Explanation section */
+  /* Help/Explanation page (separate screen) */
+  .helpwrap{
+    max-width:860px; margin:8px auto 120px; padding:0 8px;
+  }
   .help{
-    margin:14px 0 120px;
     background:var(--muted2); border:1px solid var(--border); border-radius:14px;
-    padding:14px;
+    padding:16px;
     font-size:14px; line-height:1.5; color:#ddd;
   }
-  .help h3{margin:0 0 8px; font-size:16px}
+  .help h3{margin:0 0 8px; font-size:18px}
   .help ul{margin:6px 0 0 18px}
   .help li{margin:4px 0}
 
@@ -235,7 +237,7 @@
       </div>
     </div>
 
-    <!-- TIMER SCREEN -->
+    <!-- TIMER SCREEN (MAIN) -->
     <section id="timerScreen" class="screen active">
       <div class="timer" id="timerArea">
         <div class="midwrap">
@@ -243,20 +245,20 @@
           <div class="clock" id="clock">01:00</div>
         </div>
 
-        <!-- ACTIONS are now directly under the numbers -->
+        <!-- ACTIONS directly under the numbers -->
         <div class="actions hideable">
           <div class="row">
             <button id="startBtn" class="btn btn-xxl" aria-pressed="false">▶️ Start / Pause</button>
             <button id="resetBtn" class="btn btn-xxl">⏹ Reset</button>
           </div>
           <div class="hint">Tap anywhere: 1× pause/resume • 2× reset current • 3× next phase</div>
-          <div class="hint">Swipe anywhere or tap the blue ball to hide/show controls</div>
-          <div class="hint-scroll">Scroll to next page for instructions →</div>
+          <div class="hint">Tap the blue ball to hide/show controls</div>
+          <div class="hint-scroll">Swipe left for instructions →</div>
         </div>
       </div>
     </section>
 
-    <!-- SETTINGS SCREEN (auto-save; Back + Reset only; fits on one window) -->
+    <!-- SETTINGS SCREEN (auto-save; Back + Reset only) -->
     <section id="settingsScreen" class="screen">
       <div class="settings hideable">
         <h2>Work</h2>
@@ -326,24 +328,27 @@
       </div>
     </section>
 
-    <!-- EXPLANATION / HELP (scroll down to view) -->
-    <section class="help">
-      <h3>How it works</h3>
-      <ul>
-        <li><b>Tap anywhere</b> on the timer screen:
+    <!-- HELP / INSTRUCTIONS (separate screen; only via swipe left) -->
+    <section id="helpScreen" class="screen">
+      <div class="helpwrap">
+        <div class="help">
+          <h3>How it works</h3>
           <ul>
-            <li>1× = Start / Pause / Resume</li>
-            <li>2× = Reset current phase to its start</li>
-            <li>3× = Next phase (Work↔Rest), rep +1 when leaving Rest</li>
+            <li><b>Tap anywhere</b> on the timer:
+              <ul>
+                <li>1× = Start / Pause / Resume</li>
+                <li>2× = Reset current phase to start</li>
+                <li>3× = Next phase (Work↔Rest), rep +1 when leaving Rest</li>
+              </ul>
+            </li>
+            <li><b>Blue ball</b> (left): tap to hide/show controls.</li>
+            <li><b>Swipe left</b> on main screen to open this page.</li>
+            <li><b>Swipe right / up / down</b> to return to the main timer.</li>
+            <li><b>Rep</b> (top-right): tap +1; long-press resets to 1.</li>
+            <li>Defaults: <b>Work 1:00</b>, <b>Rest 0:20</b>.</li>
           </ul>
-        </li>
-        <li><b>Blue ball</b> (bottom-left): tap to hide/show controls.</li>
-        <li><b>Swipe anywhere</b>: also hides/shows controls (blue-ball mode).</li>
-        <li><b>Work</b> mode: labels are light blue; <b>Rest</b> mode: numbers are yellow; <b>Paused</b>: numbers are purple.</li>
-        <li><b>Rep</b> (top-right): tap +1; long-press resets to 1.</li>
-        <li>Open <b>Settings</b> to set Work/Rest (per-digit +/– or tap digits to type). Changes auto-save.</li>
-        <li>Defaults: <b>Work 1:00</b>, <b>Rest 0:20</b>.</li>
-      </ul>
+        </div>
+      </div>
     </section>
   </div>
 
@@ -378,7 +383,7 @@
   // ---------- Persistence ----------
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v22')||'{}');
+      const saved = JSON.parse(localStorage.getItem('tabata_v23')||'{}');
       if(Number.isFinite(saved.work)) state.work = saved.work;
       if(Number.isFinite(saved.rest)) state.rest = saved.rest;
       if(typeof saved.muted==='boolean') state.muted = saved.muted;
@@ -388,7 +393,7 @@
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v22', JSON.stringify({
+    localStorage.setItem('tabata_v23', JSON.stringify({
       work:state.work, rest:state.rest, muted:state.muted, volume:state.volume, rep:state.rep, controlsHidden:state.controlsHidden
     }));
   }
@@ -397,6 +402,7 @@
   const app = el('app');
   const timerScreen = el('timerScreen');
   const settingsScreen = el('settingsScreen');
+  const helpScreen = el('helpScreen');
 
   const phaseEl = el('phase');
   const clockEl = el('clock');
@@ -435,8 +441,20 @@
   });
 
   function showScreen(which){
-    if(which==='settings'){ settingsScreen.classList.add('active'); timerScreen.classList.remove('active'); }
-    else { timerScreen.classList.add('active'); settingsScreen.classList.remove('active'); }
+    // timer | settings | help
+    if(which==='settings'){
+      settingsScreen.classList.add('active');
+      timerScreen.classList.remove('active');
+      helpScreen.classList.remove('active');
+    } else if(which==='help'){
+      helpScreen.classList.add('active');
+      timerScreen.classList.remove('active');
+      settingsScreen.classList.remove('active');
+    } else {
+      timerScreen.classList.add('active');
+      settingsScreen.classList.remove('active');
+      helpScreen.classList.remove('active');
+    }
   }
   function openSettings(){
     pause(); showScreen('settings');
@@ -618,9 +636,8 @@
   resetBtn.addEventListener('click', (e)=>{ e.stopPropagation(); restartCurrentPhase(); });
 
   // ---------- Anywhere taps: 1x pause/resume, 2x restart current, 3x next phase ----------
-  let tapCount = 0, tapTimer = null, didSwipe=false;
+  let tapCount = 0, tapTimer = null;
   function commitTapActions(){
-    if(didSwipe){ didSwipe=false; return; }
     const c = tapCount; tapCount=0; clearTimeout(tapTimer); tapTimer=null;
     if(c===1){ toggleStartPause(); }
     else if(c===2){ restartCurrentPhase(); }
@@ -634,23 +651,28 @@
     tapTimer=setTimeout(commitTapActions, 350);
   });
 
-  // ---------- Swipe anywhere OR tap blue ball to toggle hide/show controls ----------
+  // ---------- Swipe navigation: main <-> help ----------
   let swipeStartX=0, swipeStartY=0, isPointerDown=false;
   function onPD(e){
-    isPointerDown=true; didSwipe=false;
+    isPointerDown=true;
     const t = e.touches ? e.touches[0] : e;
     swipeStartX = t.clientX||0; swipeStartY = t.clientY||0;
+  }
+  function navFromTo(current){
+    if(current==='timer'){ showScreen('help'); }
+    else if(current==='help'){ showScreen('timer'); }
   }
   function onPU(e){
     if(!isPointerDown) return; isPointerDown=false;
     const t = e.changedTouches ? e.changedTouches[0] : e;
-    const dx=Math.abs((t.clientX||0)-swipeStartX), dy=Math.abs((t.clientY||0)-swipeStartY);
-    if(dx>40 || dy>40){
-      didSwipe=true;
-      state.controlsHidden = !state.controlsHidden;
-      persist();
-      updateAllUI();
-      if(tapTimer){ clearTimeout(tapTimer); tapTimer=null; tapCount=0; }
+    const dx=(t.clientX||0)-swipeStartX, dy=(t.clientY||0)-swipeStartY;
+    const adx=Math.abs(dx), ady=Math.abs(dy);
+    // LEFT from main -> help
+    if(timerScreen.classList.contains('active') && adx>40 && dx<0){ navFromTo('timer'); return; }
+    // RIGHT or UP or DOWN from help -> main
+    if(helpScreen && helpScreen.classList.contains('active')){
+      if(adx>40 && dx>0){ navFromTo('help'); return; }
+      if(ady>40){ navFromTo('help'); return; }
     }
   }
   document.addEventListener('pointerdown', onPD, {passive:true});
@@ -658,7 +680,7 @@
   document.addEventListener('touchstart', onPD, {passive:true});
   document.addEventListener('touchend', onPU, {passive:true});
 
-  // Blue ball toggles controls
+  // Blue ball toggles controls (no swipe for this anymore)
   fab.addEventListener('click', (e)=>{
     e.stopPropagation();
     state.controlsHidden = !state.controlsHidden;
@@ -686,11 +708,11 @@
     if(repPressTimer){ clearTimeout(repPressTimer); repPressTimer=null; }
   });
 
-  // PC: any key toggles start/pause (ignore when editing inputs / on settings)
+  // PC: any key toggles start/pause (ignore when editing inputs / on settings/help)
   document.addEventListener('keydown', (e)=>{
     const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
     if(tag==='INPUT' || tag==='TEXTAREA' || e.target.isContentEditable) return;
-    if(settingsScreen.classList.contains('active')) return;
+    if(settingsScreen.classList.contains('active') || helpScreen.classList.contains('active')) return;
     toggleStartPause();
   });
 
