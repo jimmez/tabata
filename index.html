@@ -107,6 +107,9 @@
   /* Timer layout */
   .timer{ text-align:center; padding:6px 6px}
   .phase{font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin-top:2px}
+  .midwrap{
+    min-height:56vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
   .clock{font-size:112px; font-weight:900; line-height:1; letter-spacing:.02em; margin:6px 0}
   .cta.hideable{display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:center; margin-top:6px}
   .row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
@@ -178,8 +181,8 @@
     <!-- VERY TOP: small grey Work/Rest goal times -->
     <div class="meta-top">
       <div class="group">
-        <span class="tag">Work <b id="workGoalTop">00:20</b></span>
-        <span class="tag">Rest <b id="restGoalTop">00:10</b></span>
+        <span class="tag">Work <b id="workGoalTop">01:00</b></span>
+        <span class="tag">Rest <b id="restGoalTop">00:20</b></span>
       </div>
     </div>
 
@@ -211,8 +214,10 @@
     <!-- TIMER SCREEN -->
     <section id="timerScreen" class="screen active">
       <div class="timer" id="timerArea">
-        <div class="phase" id="phase">Work</div>
-        <div class="clock" id="clock">00:20</div>
+        <div class="midwrap">
+          <div class="phase" id="phase">Work</div>
+          <div class="clock" id="clock">01:00</div>
+        </div>
 
         <div class="cta hideable">
           <div class="row">
@@ -220,7 +225,7 @@
             <button id="resetBtn" class="btn btn-xxl">⏹ Reset</button>
           </div>
           <div class="row"><div class="hint">Tap anywhere: 1× pause/resume · 2× reset current · 3× next phase</div></div>
-          <div class="row"><div class="hint">Use the blue ball to hide/show all controls</div></div>
+          <div class="row"><div class="hint">Swipe anywhere or tap the blue ball to hide/show controls</div></div>
         </div>
       </div>
     </section>
@@ -239,13 +244,13 @@
             </div>
             <div class="digit-box" data-role="mo">
               <div class="ud"><button data-act="inc">＋</button></div>
-              <div class="digit" tabindex="0">0</div>
+              <div class="digit" tabindex="0">1</div>
               <div class="ud"><button data-act="dec">－</button></div>
               <div class="dlabel">Min (ones)</div>
             </div>
             <div class="digit-box" data-role="st">
               <div class="ud"><button data-act="inc">＋</button></div>
-              <div class="digit" tabindex="0">2</div>
+              <div class="digit" tabindex="0">0</div>
               <div class="ud"><button data-act="dec">－</button></div>
               <div class="dlabel">Sec (tens)</div>
             </div>
@@ -275,7 +280,7 @@
             </div>
             <div class="digit-box" data-role="st">
               <div class="ud"><button data-act="inc">＋</button></div>
-              <div class="digit" tabindex="0">1</div>
+              <div class="digit" tabindex="0">2</div>
               <div class="ud"><button data-act="dec">－</button></div>
               <div class="dlabel">Sec (tens)</div>
             </div>
@@ -313,11 +318,11 @@
 
   // ---------- State ----------
   const state = {
-    work: 20, rest: 10,
-    phase: 'work',       // 'work' | 'rest'
+    work: 60, rest: 20,     // DEFAULTS: 1:00 work, 0:20 rest
+    phase: 'work',          // 'work' | 'rest'
     running: false,
-    startTs: 0,          // phase start timestamp
-    elapsed: 0,          // elapsed within current phase (sec, float)
+    startTs: 0,             // phase start timestamp
+    elapsed: 0,             // elapsed within current phase (sec, float)
     rep: 1,
     muted: false,
     volume: 0.7,
@@ -327,7 +332,7 @@
   // ---------- Persistence ----------
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v19')||'{}');
+      const saved = JSON.parse(localStorage.getItem('tabata_v20')||'{}');
       if(Number.isFinite(saved.work)) state.work = saved.work;
       if(Number.isFinite(saved.rest)) state.rest = saved.rest;
       if(typeof saved.muted==='boolean') state.muted = saved.muted;
@@ -336,7 +341,7 @@
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v19', JSON.stringify({
+    localStorage.setItem('tabata_v20', JSON.stringify({
       work:state.work, rest:state.rest, muted:state.muted, volume:state.volume, rep:state.rep
     }));
   }
@@ -570,13 +575,12 @@
 
   // Buttons
   startBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggleStartPause(); });
-
-  // Reset button (simple: single tap -> restart current)
   resetBtn.addEventListener('click', (e)=>{ e.stopPropagation(); restartCurrentPhase(); });
 
   // ---------- Anywhere taps: 1x pause/resume, 2x restart current, 3x next phase ----------
-  let tapCount = 0, tapTimer = null;
+  let tapCount = 0, tapTimer = null, didSwipe=false;
   function commitTapActions(){
+    if(didSwipe){ didSwipe=false; return; } // ignore taps if this was a swipe
     const c = tapCount; tapCount=0; clearTimeout(tapTimer); tapTimer=null;
     if(c===1){ toggleStartPause(); }
     else if(c===2){ restartCurrentPhase(); }
@@ -590,8 +594,32 @@
     tapTimer=setTimeout(commitTapActions, 350);
   });
 
-  // ---------- Blue ball: ONLY toggle hide/show controls ----------
-  fab.addEventListener('click', ()=>{
+  // ---------- Swipe anywhere OR tap blue ball to toggle hide/show controls ----------
+  let swipeStartX=0, swipeStartY=0, isPointerDown=false;
+  function onPD(e){
+    isPointerDown=true; didSwipe=false;
+    const t = e.touches ? e.touches[0] : e;
+    swipeStartX = t.clientX||0; swipeStartY = t.clientY||0;
+  }
+  function onPU(e){
+    if(!isPointerDown) return; isPointerDown=false;
+    const t = e.changedTouches ? e.changedTouches[0] : e;
+    const dx=Math.abs((t.clientX||0)-swipeStartX), dy=Math.abs((t.clientY||0)-swipeStartY);
+    if(dx>40 || dy>40){
+      didSwipe=true; // cancel tap handling
+      state.controlsHidden = !state.controlsHidden;
+      updateAllUI();
+      if(tapTimer){ clearTimeout(tapTimer); tapTimer=null; tapCount=0; }
+    }
+  }
+  document.addEventListener('pointerdown', onPD, {passive:true});
+  document.addEventListener('pointerup', onPU, {passive:true});
+  document.addEventListener('touchstart', onPD, {passive:true});
+  document.addEventListener('touchend', onPU, {passive:true});
+
+  // Blue ball toggles controls
+  fab.addEventListener('click', (e)=>{
+    e.stopPropagation();
     state.controlsHidden = !state.controlsHidden;
     updateAllUI();
   });
