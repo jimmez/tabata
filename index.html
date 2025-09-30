@@ -70,10 +70,8 @@
     background:var(--muted2); border:1px solid var(--border);
     border-radius:999px; padding:6px 10px; display:flex; align-items:center; gap:6px;
   }
-  .meta-tags.hideable{} /* grouped so we can hide with controls */
-  /* Bigger, bolder stopwatch */
+  .meta-tags{} /* this group is hidden while playing */
   .stopwatch{display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:999px;}
-  .stopwatch.hidden{display:none;}
   .stopwatch .icon{font-size:16px; opacity:.95}
   .stopwatch b{font-size:18px; font-weight:1000; letter-spacing:.02em;}
   @media (max-width:420px){
@@ -96,8 +94,8 @@
   }
   .pill:active{transform:translateY(1px)}
 
-  /* Topbar (hideable with swipe) */
-  .topbar.hideable{
+  /* Topbar (parts are hidden while playing) */
+  .topbar{
     display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap
   }
   .chip{
@@ -123,7 +121,7 @@
   .btn.disabled{opacity:.45; filter:grayscale(.2); cursor:not-allowed}
   .btn.active{ outline:2px solid rgba(255,255,255,.12); }
 
-  /* Big Settings button (left-hand friendly) */
+  /* Big Settings button */
   .btn-settings-big{
     width:100%; max-width:220px; font-size:20px; padding:14px 16px; border-radius:14px;
     display:block; margin-top:8px;
@@ -148,15 +146,15 @@
   .clock{font-size:112px; font-weight:900; line-height:1; letter-spacing:.02em; margin:6px 0}
   .phase{font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin-top:6px}
 
-  /* ACTIONS directly under the numbers (hideable) */
-  .actions.hideable{
+  /* ACTIONS */
+  .actions{
     display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:flex-start;
     margin-top:4px;
   }
   .actions .row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
   .hint{font-size:12px; opacity:.8}
 
-  /* Settings: compact */
+  /* Settings */
   .settings{background:var(--muted2); border:1px solid var(--border); border-radius:14px; padding:10px 12px}
   h2{margin:4px 0 8px; font-size:16px; text-transform:uppercase; letter-spacing:.07em}
   .block{background:var(--muted); border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:8px}
@@ -185,10 +183,6 @@
     .settings-cta .btn{min-width:128px}
     .rep-big{font-size:64px}
   }
-
-  /* Hideable controls toggle */
-  .controls-hidden .hideable{display:none !important;}
-  .controls-hidden .meta-tags{display:none !important;}
 
   /* Footer badge (version) */
   .footer{
@@ -230,11 +224,11 @@
   <div class="app" id="app">
     <!-- VERY TOP: Work/Rest + Stopwatch -->
     <div class="meta-top">
-      <span class="meta-tags hideable">
-        <span class="tag">Work <b id="workGoalTop">01:00</b></span>
-        <span class="tag">Rest <b id="restGoalTop">00:20</b></span>
+      <span class="meta-tags" id="metaTags">
+        <span class="tag">Work <b id="workGoalTop">00:20</b></span>
+        <span class="tag">Rest <b id="restGoalTop">00:10</b></span>
       </span>
-      <span id="stopwatchTag" class="tag stopwatch">
+      <span class="tag stopwatch">
         <span class="icon">⏱️</span><b id="stopwatchText">00:00</b>
       </span>
     </div>
@@ -245,23 +239,23 @@
       <button id="openHelp" class="pill" aria-label="Open instructions">ℹ️</button>
     </div>
 
-    <!-- CONTROLS BAR (hideable via swipe; NOT in settings) -->
-    <div class="topbar hideable">
+    <!-- CONTROLS BAR -->
+    <div class="topbar">
       <div class="left" style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <label class="chip" title="Toggle all sounds">
+          <label class="chip" id="soundChip" title="Toggle all sounds">
             <span>Sound</span>
             <div class="switch">
               <input type="checkbox" id="soundToggle" checked />
               <div class="knob"></div>
             </div>
           </label>
-          <label class="chip" title="Volume">
+          <label class="chip" id="volChip" title="Volume">
             <span>Vol</span>
             <input id="volume" type="range" min="0" max="100" value="70" />
           </label>
         </div>
-        <!-- Left-hand friendly Settings button (press again in Settings to go back) -->
+        <!-- Settings button (hidden while playing) -->
         <button class="btn btn-settings-big" id="openSettings">⚙️ Settings</button>
       </div>
       <div class="right"></div>
@@ -272,17 +266,17 @@
       <div class="timer" id="timerArea">
         <div class="midwrap">
           <div class="pause-banner" id="pauseBanner">PAUSE</div>
-          <div class="clock" id="clock">01:00</div>
+          <div class="clock" id="clock">00:20</div>
           <div class="phase" id="phase">Work</div>
         </div>
 
         <!-- ACTIONS directly under the numbers -->
-        <div class="actions hideable">
+        <div class="actions">
           <div class="row">
             <button id="startBtn" class="btn btn-xxl" aria-pressed="false">▶️ Start / Pause</button>
             <button id="resetBtn" class="btn btn-xxl" title="Reset repetitions to 1">⏹ Reset Reps</button>
           </div>
-          <div class="hint">Tap anywhere to Start/Pause • Swipe left/right to show/hide controls</div>
+          <div class="hint">Tap anywhere to Start/Pause • Swipe left/right to show/hide top controls</div>
         </div>
       </div>
     </section>
@@ -301,13 +295,13 @@
             </div>
             <div class="digit-box" data-role="mo">
               <div class="ud"><button data-act="inc">＋</button></div>
-              <div class="digit" tabindex="0">1</div>
+              <div class="digit" tabindex="0">0</div>
               <div class="ud"><button data-act="dec">－</button></div>
               <div class="dlabel">Min (ones)</div>
             </div>
             <div class="digit-box" data-role="st">
               <div class="ud"><button data-act="inc">＋</button></div>
-              <div class="digit" tabindex="0">0</div>
+              <div class="digit" tabindex="0">2</div>
               <div class="ud"><button data-act="dec">－</button></div>
               <div class="dlabel">Sec (tens)</div>
             </div>
@@ -337,7 +331,7 @@
             </div>
             <div class="digit-box" data-role="st">
               <div class="ud"><button data-act="inc">＋</button></div>
-              <div class="digit" tabindex="0">2</div>
+              <div class="digit" tabindex="0">1</div>
               <div class="ud"><button data-act="dec">－</button></div>
               <div class="dlabel">Sec (tens)</div>
             </div>
@@ -366,11 +360,11 @@
           <h3>How it works</h3>
           <ul>
             <li><b>Tap anywhere</b> on the main timer to Start / Pause / Resume.</li>
-            <li><b>Swipe left/right</b> (or click-drag on desktop) to show/hide controls.</li>
-            <li>Open <b>Settings</b> to edit times (per-digit +/– or tap digits to type). Changes auto-save.</li>
+            <li><b>Swipe left/right</b> (or click-drag on desktop) to show/hide the top controls.</li>
+            <li><b>Playing</b> hides Work/Rest tags, Sound/Vol and Settings; <b>Pause</b> shows them.</li>
             <li>Main <b>Reset Reps</b>: resets reps to 1 and resets the stopwatch.</li>
             <li>Settings <b>Reset</b>: zeros times, resets reps to 1, resets the stopwatch.</li>
-            <li>Defaults: <b>Work 1:00</b>, <b>Rest 0:20</b>.</li>
+            <li>Defaults: <b>Work 0:20</b>, <b>Rest 0:10</b>.</li>
             <li><button class="btn" id="backFromHelp">← Back</button></li>
           </ul>
         </div>
@@ -379,7 +373,7 @@
   </div>
 
   <!-- Permanent footer badge (bottom-right) -->
-  <div class="footer" id="footerBadge">v8</div>
+  <div class="footer" id="footerBadge">v9</div>
 
   <!-- Toast -->
   <div id="toast" class="toast">Repetitions reset to 1</div>
@@ -435,9 +429,9 @@
     setTimeout(()=>toast.classList.remove('show'), 1200);
   };
 
-  // ----- State -----
+  // ----- State (defaults work=20, rest=10) -----
   const state = {
-    work: 60, rest: 20,
+    work: 20, rest: 10,
     phase: 'work',
     running: false,
     startTs: 0,
@@ -445,10 +439,9 @@
     rep: 1,
     muted: false,
     volume: 0.7,
-    controlsHidden: false,
+    controlsHidden: false, // user swipe toggle for top controls group
 
-    // Stopwatch
-    swVisible: true,         // always visible in v8
+    // Stopwatch (always visible)
     swElapsed: 0,            // seconds accumulated
     swLastStart: 0           // performance.now when last started
   };
@@ -456,7 +449,7 @@
   // ----- Persistence -----
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v34')||'{}');
+      const saved = JSON.parse(localStorage.getItem('tabata_v35')||'{}');
       if(Number.isFinite(saved.work)) state.work = saved.work;
       if(Number.isFinite(saved.rest)) state.rest = saved.rest;
       if(typeof saved.muted==='boolean') state.muted = saved.muted;
@@ -467,7 +460,7 @@
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v34', JSON.stringify({
+    localStorage.setItem('tabata_v35', JSON.stringify({
       work:state.work, rest:state.rest, muted:state.muted, volume:state.volume,
       rep:state.rep, controlsHidden:state.controlsHidden, swElapsed:state.swElapsed
     }));
@@ -484,6 +477,7 @@
   const clockEl = $('clock');
   const repBtn = $('repBtn');
 
+  const metaTags = $('metaTags');
   const workGoalTopEl = $('workGoalTop');
   const restGoalTopEl = $('restGoalTop');
 
@@ -491,6 +485,8 @@
 
   const soundToggle = $('soundToggle');
   const volumeInput = $('volume');
+  const soundChip = $('soundChip');
+  const volChip = $('volChip');
   const startBtn = $('startBtn');
   const resetBtn = $('resetBtn');
 
@@ -524,8 +520,7 @@
     for(const [k,sec] of Object.entries(map)){
       if(k===which) sec.classList.add('active'); else sec.classList.remove('active');
     }
-    // In settings screen we keep controls visible
-    if(which==='settings'){ state.controlsHidden = false; }
+    if(which==='settings'){ state.controlsHidden = false; } // ensure controls visible when editing
     updateAllUI();
   }
   function openSettings(){
@@ -596,6 +591,20 @@
     stopwatchText.textContent = fmt(sw);
   }
 
+  // v9: Hide/show top controls based on play/pause
+  function updateTopControlsVisibility(){
+    const playing = state.running;
+    // User swipe toggle still applies, but v9 says: when playing always hide these.
+    const shouldHideMeta = playing || state.controlsHidden;
+    const shouldHideChips = playing || state.controlsHidden;
+    const shouldHideSettingsBtn = playing || state.controlsHidden;
+
+    metaTags.style.display = shouldHideMeta ? 'none' : '';
+    soundChip.style.display = shouldHideChips ? 'none' : '';
+    volChip.style.display   = shouldHideChips ? 'none' : '';
+    openSettingsBtn.style.display = shouldHideSettingsBtn ? 'none' : '';
+  }
+
   function updateAllUI(){
     phaseEl.textContent = state.phase==='work'?'Work':'Rest';
     if(!state.running && state.elapsed>0){
@@ -611,13 +620,11 @@
     updateProgressAndBackground();
     setModeClasses();
 
-    const canHide = !settingsScreen.classList.contains('active');
-    app.classList.toggle('controls-hidden', state.controlsHidden && canHide);
-
     startBtn.classList.toggle('active', state.running);
     startBtn.setAttribute('aria-pressed', String(state.running));
 
     updateStopwatchUI();
+    updateTopControlsVisibility();
   }
 
   // init
@@ -637,7 +644,7 @@
     const mo=+qs('[data-role="mo"] .digit',grid).textContent;
     const st=+qs('[data-role="st"] .digit',grid).textContent;
     const so=+qs('[data-role="so"] .digit',grid).textContent;
-    return partsToSecs(mt,mo,st,so);
+    return (mt*10+mo)*60 + (st*10+so);
   }
   function commitDigits(kind){
     const secs = readDigits(kind);
@@ -694,7 +701,7 @@
     state.running=false;
     if(rafId) cancelAnimationFrame(rafId);
     rafId=null;
-    // accumulate stopwatch
+    // accumulate stopwatch and pause it
     if(state.swLastStart){
       state.swElapsed += (performance.now() - state.swLastStart)/1000;
       state.swLastStart = 0;
@@ -767,7 +774,6 @@
   function commitTapActions(){
     const c = tapCount; tapCount=0; clearTimeout(tapTimer); tapTimer=null;
     if(c===1){ toggleStartPause(); }
-    // (If you still want double/triple tap actions, add here)
   }
   timerScreen.addEventListener('pointerdown', (e)=>{
     if(e.target.closest('button, input, label, .digit, .ud button, .settings, .chip')) return;
@@ -776,11 +782,10 @@
     tapTimer=setTimeout(commitTapActions, 280);
   });
 
-  // Swipe to toggle controls (works on touch and mouse drag)
+  // Swipe to toggle visibility of the top controls group (user preference)
   let swipeStartX=0, swipeStartY=0, swiping=false;
   const SWIPE_THRESH = 60;   // px horizontal
   const TAP_SLOP = 12;       // ignore tiny jitters
-
   function onPointerDown(e){
     if(e.target.closest('button, input, label, .digit, .ud button, .settings, .chip')) return;
     swipeStartX = e.clientX; swipeStartY = e.clientY; swiping = true;
@@ -790,15 +795,12 @@
     const dx = e.clientX - swipeStartX;
     const dy = e.clientY - swipeStartY;
     if(Math.abs(dx) > SWIPE_THRESH && Math.abs(dx) > Math.abs(dy)+TAP_SLOP){
-      // Toggle once per gesture
       swiping = false;
       state.controlsHidden = !state.controlsHidden;
       persist(); updateAllUI();
     }
   }
   function onPointerUp(){ swiping=false; }
-
-  // Attach swipe listeners on the whole timer screen area
   timerScreen.addEventListener('pointerdown', onPointerDown);
   timerScreen.addEventListener('pointermove', onPointerMove);
   timerScreen.addEventListener('pointerup', onPointerUp);
@@ -876,8 +878,13 @@
     showToast('Times zeroed • Reps reset • Stopwatch reset');
   });
 
-  // Initial draw
+  // Initial draw (ensure top controls reflect defaults)
   (function initDraw(){
+    // set initial meta labels (0:20 / 0:10)
+    updateMetaTop();
+    // set initial clock for Work
+    clockEl.textContent = fmt(state.work);
+    // progress bar base
     const total = currentTotal();
     const frac = total>0 ? Math.min(state.elapsed/total, 1) : 0;
     progressFull.style.height = (Math.max(6, frac*100)).toFixed(2)+'vh';
