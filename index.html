@@ -207,7 +207,7 @@
     .fab2{ bottom:80px; right:24px; }
   }
 
-  /* Footer badge (permanent bottom-right: v4) */
+  /* Footer badge (permanent bottom-right: version) */
   .footer{
     position:fixed; bottom:6px; right:8px;
     text-align:right; font-size:12px; opacity:.92;
@@ -245,7 +245,7 @@
   <div id="progressFull" class="progress-full"></div>
 
   <div class="app" id="app">
-    <!-- VERY TOP: Work/Rest + (bigger) Stopwatch -->
+    <!-- VERY TOP: Work/Rest + Stopwatch -->
     <div class="meta-top">
       <span class="tag">Work <b id="workGoalTop">01:00</b></span>
       <span class="tag">Rest <b id="restGoalTop">00:20</b></span>
@@ -368,10 +368,10 @@
 
         <div class="settings-cta">
           <button class="btn" id="backToTimer">↩️ Back</button>
-          <button class="btn" id="settingsReset" title="Tap to zero times • Tap 4× quickly to reset repetitions">⏹ Reset</button>
+          <button class="btn" id="settingsReset" title="Zero times + Reset reps + Reset stopwatch">⏹ Reset</button>
           <button class="btn btn-settings-big" id="toggleSettings">⚙️ Settings</button>
         </div>
-        <div class="hint">Tip: Press <b>Reset</b> 4× quickly to reset repetitions to 1.</div>
+        <div class="hint">Reset here: zeros Work/Rest, resets Reps to 1, and resets the Stopwatch.</div>
       </div>
     </section>
 
@@ -390,7 +390,8 @@
             </li>
             <li>Left blue ball: hide/show controls (disabled in Settings).</li>
             <li>Right blue ball: show/hide stopwatch.</li>
-            <li>Open <b>Settings</b> to edit times (per-digit +/– or tap digits to type). Changes auto-save.</li>
+            <li>Main <b>Reset Reps</b>: resets reps to 1 and resets the stopwatch.</li>
+            <li>Settings <b>Reset</b>: zeros times, resets reps to 1, resets the stopwatch.</li>
             <li>Defaults: <b>Work 1:00</b>, <b>Rest 0:20</b>.</li>
             <li><button class="btn" id="backFromHelp">← Back</button></li>
           </ul>
@@ -404,7 +405,7 @@
   <div class="fab2" id="fab2" title="Show/hide stopwatch"><span class="dot">●</span></div>
 
   <!-- Permanent footer badge (bottom-right) -->
-  <div class="footer" id="footerBadge">v4</div>
+  <div class="footer" id="footerBadge">v6</div>
 
   <!-- Toast -->
   <div id="toast" class="toast">Repetitions reset to 1</div>
@@ -439,6 +440,7 @@
       el.webkitRequestFullscreen();
     }
   }
+  document.addEventListener('pointerdown', tryFullscreen, {once:true});
 
   // ----- Utilities -----
   const $ = id => document.getElementById(id);
@@ -480,7 +482,7 @@
   // ----- Persistence -----
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v31')||'{}');
+      const saved = JSON.parse(localStorage.getItem('tabata_v32')||'{}');
       if(Number.isFinite(saved.work)) state.work = saved.work;
       if(Number.isFinite(saved.rest)) state.rest = saved.rest;
       if(typeof saved.muted==='boolean') state.muted = saved.muted;
@@ -492,7 +494,7 @@
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v31', JSON.stringify({
+    localStorage.setItem('tabata_v32', JSON.stringify({
       work:state.work, rest:state.rest, muted:state.muted, volume:state.volume,
       rep:state.rep, controlsHidden:state.controlsHidden,
       swVisible:state.swVisible, swElapsed:state.swElapsed
@@ -526,9 +528,6 @@
   const toggleSettingsBtn = $('toggleSettings');
   const stopwatchTag = $('stopwatchTag');
   const stopwatchText = $('stopwatchText');
-
-  // Any initial click/tap attempts fullscreen once
-  document.addEventListener('pointerdown', tryFullscreen, {once:true});
 
   // ----- Topbar -----
   soundToggle.checked = !state.muted;
@@ -781,9 +780,20 @@
   // Buttons
   startBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggleStartPause(); });
 
-  // MAIN Reset button: reset all repetitions to 1 + restart current phase
+  // MAIN Reset button: reset all repetitions to 1 + restart current phase + reset stopwatch
   function doResetReps(){
-    state.rep = 1; persist(); restartCurrentPhase(); showToast('Repetitions reset to 1');
+    // Reset reps
+    state.rep = 1;
+    // Reset stopwatch to 0; continue from 0 if running
+    state.swElapsed = 0;
+    if(state.running){
+      state.swLastStart = performance.now();
+    } else {
+      state.swLastStart = 0;
+    }
+    persist();
+    restartCurrentPhase();
+    showToast('Repetitions reset to 1 • Stopwatch reset');
   }
   resetBtn.addEventListener('click', (e)=>{ e.stopPropagation(); doResetReps(); });
 
@@ -874,25 +884,22 @@
   }
   function runPhaseTone(){ if(state.muted) return; (state.phase==='work') ? workTone() : restTone(); }
 
-  // Settings Reset: zero times; 4 taps => reset reps
-  let settingsResetCount = 0;
-  let settingsResetTimer = null;
+  // Settings Reset: zero times + reset reps to 1 + reset stopwatch
   $('settingsReset').addEventListener('click', ()=>{
+    // Pause timer and zero configured times
     pause();
     state.work = 0; state.rest = 0;
+
+    // Reset reps and stopwatch
+    state.rep = 1;
+    state.swElapsed = 0;
+    state.swLastStart = 0;
+
     persist();
     populateDigits('work', state.work);
     populateDigits('rest', state.rest);
     updateMetaTop(); updateStartEnabled(); updateAllUI();
-
-    settingsResetCount++;
-    if(settingsResetTimer) clearTimeout(settingsResetTimer);
-    settingsResetTimer = setTimeout(()=>{
-      if(settingsResetCount >= 4){
-        state.rep = 1; persist(); showToast('Repetitions reset to 1');
-      }
-      settingsResetCount = 0;
-    }, 900);
+    showToast('Times zeroed • Reps reset • Stopwatch reset');
   });
 
   // Initial draw
