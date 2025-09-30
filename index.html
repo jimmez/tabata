@@ -67,15 +67,20 @@
   /* VERY TOP: Work/Rest + Stopwatch */
   .meta-top{
     display:flex; align-items:center; justify-content:flex-start; gap:10px; flex-wrap:wrap;
-    font-size:12px; color:#bbb; opacity:.95; padding:4px 0 2px; min-height:28px;
+    font-size:12px; color:#bbb; opacity:.95; padding:4px 0 2px; min-height:32px;
   }
   .meta-top .tag{
     background:var(--muted2); border:1px solid var(--border);
-    border-radius:999px; padding:5px 9px; display:flex; align-items:center; gap:6px;
+    border-radius:999px; padding:6px 10px; display:flex; align-items:center; gap:6px;
   }
-  .stopwatch{display:inline-flex; align-items:center; gap:6px;}
+  /* Bigger, bolder stopwatch */
+  .stopwatch{display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:999px;}
   .stopwatch.hidden{display:none;}
-  .stopwatch .icon{font-size:14px; opacity:.9}
+  .stopwatch .icon{font-size:16px; opacity:.95}
+  .stopwatch b{font-size:18px; font-weight:1000; letter-spacing:.02em;}
+  @media (max-width:420px){
+    .stopwatch b{font-size:17px}
+  }
 
   /* TOP-RIGHT: Big REP + info */
   .top-right{
@@ -202,21 +207,13 @@
     .fab2{ bottom:80px; right:24px; }
   }
 
-  /* Footer badge (permanent bottom-right: v2) */
+  /* Footer badge (permanent bottom-right: v4) */
   .footer{
     position:fixed; bottom:6px; right:8px;
     text-align:right; font-size:12px; opacity:.92;
     padding:6px 8px; background:var(--muted2);
     border:1px solid var(--border); border-radius:8px;
     z-index:5; line-height:1.25;
-  }
-
-  /* Temporary bottom splash "V3" for 5s (appears where footer used to be, centered bottom) */
-  .splash-bottom{
-    position:fixed; left:50%; transform:translateX(-50%);
-    bottom:6px; z-index:6;
-    background:rgba(0,0,0,.7); color:#fff; padding:8px 12px; border-radius:10px;
-    border:1px solid var(--border); font-size:14px; letter-spacing:.02em;
   }
 
   /* Help page */
@@ -247,11 +244,8 @@
   <!-- Rising background bar -->
   <div id="progressFull" class="progress-full"></div>
 
-  <!-- Temporary bottom splash for 5s -->
-  <div id="splashBottom" class="splash-bottom">V3</div>
-
   <div class="app" id="app">
-    <!-- VERY TOP: Work/Rest + Stopwatch -->
+    <!-- VERY TOP: Work/Rest + (bigger) Stopwatch -->
     <div class="meta-top">
       <span class="tag">Work <b id="workGoalTop">01:00</b></span>
       <span class="tag">Rest <b id="restGoalTop">00:20</b></span>
@@ -410,7 +404,7 @@
   <div class="fab2" id="fab2" title="Show/hide stopwatch"><span class="dot">●</span></div>
 
   <!-- Permanent footer badge (bottom-right) -->
-  <div class="footer" id="footerBadge">v2</div>
+  <div class="footer" id="footerBadge">v4</div>
 
   <!-- Toast -->
   <div id="toast" class="toast">Repetitions reset to 1</div>
@@ -434,8 +428,20 @@
     document.head.appendChild(link);
   })();
 
+  // ----- Try enter fullscreen on first user interaction -----
+  let triedFS = false;
+  function tryFullscreen(){
+    if(triedFS) return; triedFS = true;
+    const el = document.documentElement;
+    if(el.requestFullscreen){
+      el.requestFullscreen().catch(()=>{});
+    } else if(el.webkitRequestFullscreen){
+      el.webkitRequestFullscreen();
+    }
+  }
+
   // ----- Utilities -----
-  const el = id => document.getElementById(id);
+  const $ = id => document.getElementById(id);
   const qs = (s, r=document) => r.querySelector(s);
   const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
   const clamp = (v,min,max) => Math.min(max, Math.max(min, v));
@@ -447,9 +453,10 @@
     const s = secs%60;
     return h>0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
   };
+  const toast = $('toast');
   const showToast = (txt)=>{
-    const t=el('toast'); t.textContent=txt; t.classList.add('show');
-    setTimeout(()=>t.classList.remove('show'), 1200);
+    toast.textContent=txt; toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'), 1200);
   };
 
   // ----- State -----
@@ -473,7 +480,7 @@
   // ----- Persistence -----
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v30')||'{}');
+      const saved = JSON.parse(localStorage.getItem('tabata_v31')||'{}');
       if(Number.isFinite(saved.work)) state.work = saved.work;
       if(Number.isFinite(saved.rest)) state.rest = saved.rest;
       if(typeof saved.muted==='boolean') state.muted = saved.muted;
@@ -485,7 +492,7 @@
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v30', JSON.stringify({
+    localStorage.setItem('tabata_v31', JSON.stringify({
       work:state.work, rest:state.rest, muted:state.muted, volume:state.volume,
       rep:state.rep, controlsHidden:state.controlsHidden,
       swVisible:state.swVisible, swElapsed:state.swElapsed
@@ -493,36 +500,35 @@
   }
 
   // ----- Elements -----
-  const app = el('app');
-  const timerScreen = el('timerScreen');
-  const settingsScreen = el('settingsScreen');
-  const helpScreen = el('helpScreen');
+  const app = $('app');
+  const timerScreen = $('timerScreen');
+  const settingsScreen = $('settingsScreen');
+  const helpScreen = $('helpScreen');
 
-  const splashBottom = el('splashBottom');
-  const pauseBanner = el('pauseBanner');
-  const phaseEl = el('phase');
-  const clockEl = el('clock');
-  const repBtn = el('repBtn');
+  const pauseBanner = $('pauseBanner');
+  const phaseEl = $('phase');
+  const clockEl = $('clock');
+  const repBtn = $('repBtn');
 
-  const workGoalTopEl = el('workGoalTop');
-  const restGoalTopEl = el('restGoalTop');
+  const workGoalTopEl = $('workGoalTop');
+  const restGoalTopEl = $('restGoalTop');
 
-  const progressFull = el('progressFull');
+  const progressFull = $('progressFull');
 
-  const soundToggle = el('soundToggle');
-  const volumeInput = el('volume');
-  const startBtn = el('startBtn');
-  const resetBtn = el('resetBtn');
-  const fab = el('fab');     // left: controls
-  const fab2 = el('fab2');   // right: stopwatch
+  const soundToggle = $('soundToggle');
+  const volumeInput = $('volume');
+  const startBtn = $('startBtn');
+  const resetBtn = $('resetBtn');
+  const fab = $('fab');     // left: controls
+  const fab2 = $('fab2');   // right: stopwatch
 
-  const openSettingsBtn = el('openSettings');
-  const toggleSettingsBtn = el('toggleSettings');
-  const stopwatchTag = el('stopwatchTag');
-  const stopwatchText = el('stopwatchText');
+  const openSettingsBtn = $('openSettings');
+  const toggleSettingsBtn = $('toggleSettings');
+  const stopwatchTag = $('stopwatchTag');
+  const stopwatchText = $('stopwatchText');
 
-  // Splash V3 bottom for 5 seconds, then remove node
-  setTimeout(()=>{ if(splashBottom && splashBottom.parentNode){ splashBottom.parentNode.removeChild(splashBottom); } }, 5000);
+  // Any initial click/tap attempts fullscreen once
+  document.addEventListener('pointerdown', tryFullscreen, {once:true});
 
   // ----- Topbar -----
   soundToggle.checked = !state.muted;
@@ -531,9 +537,9 @@
   volumeInput.addEventListener('input', ()=>{ state.volume = clamp(+volumeInput.value/100,0,1); persist(); });
 
   // ----- Navigation -----
-  el('openHelp').addEventListener('click', ()=> showScreen('help'));
-  el('backFromHelp').addEventListener('click', ()=> showScreen('timer'));
-  el('backToTimer').addEventListener('click', ()=> showScreen('timer'));
+  $('openHelp').addEventListener('click', ()=> showScreen('help'));
+  $('backFromHelp').addEventListener('click', ()=> showScreen('timer'));
+  $('backToTimer').addEventListener('click', ()=> showScreen('timer'));
 
   function onSettingsPressed(){
     if(settingsScreen.classList.contains('active')){
@@ -764,7 +770,7 @@
     const now = performance.now();
     state.elapsed = Math.max(0, (now - state.startTs)/1000);
 
-    // live stopwatch preview
+    // live stopwatch preview (fast update)
     updateStopwatchUI();
 
     if(state.elapsed >= total){ switchPhaseAuto(); state.startTs = performance.now(); }
@@ -871,7 +877,7 @@
   // Settings Reset: zero times; 4 taps => reset reps
   let settingsResetCount = 0;
   let settingsResetTimer = null;
-  el('settingsReset').addEventListener('click', ()=>{
+  $('settingsReset').addEventListener('click', ()=>{
     pause();
     state.work = 0; state.rest = 0;
     persist();
