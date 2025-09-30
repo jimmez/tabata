@@ -272,11 +272,11 @@
 
         <!-- ACTIONS directly under the numbers -->
         <div class="actions">
-          <div class="row">
+          <div class="row" id="actionRow">
             <button id="startBtn" class="btn btn-xxl" aria-pressed="false">▶️ Start / Pause</button>
             <button id="resetBtn" class="btn btn-xxl" title="Reset repetitions to 1">⏹ Reset Reps</button>
           </div>
-          <div class="hint">Tap anywhere to Start/Pause • Swipe left/right to show/hide top controls</div>
+          <div class="hint" id="hintLine">Tap anywhere to Start/Pause • Swipe left/right to show/hide top controls</div>
         </div>
       </div>
     </section>
@@ -361,7 +361,8 @@
           <ul>
             <li><b>Tap anywhere</b> on the main timer to Start / Pause / Resume.</li>
             <li><b>Swipe left/right</b> (or click-drag on desktop) to show/hide the top controls.</li>
-            <li><b>Playing</b> hides Work/Rest tags, Sound/Vol and Settings; <b>Pause</b> shows them.</li>
+            <li><b>Playing</b> hides Work/Rest tags, Sound/Vol and Settings, and also Start/Reset buttons + bottom hint.</li>
+            <li><b>Pause</b> shows them; the bottom hint is shown for <b>5 seconds</b> after pausing.</li>
             <li>Main <b>Reset Reps</b>: resets reps to 1 and resets the stopwatch.</li>
             <li>Settings <b>Reset</b>: zeros times, resets reps to 1, resets the stopwatch.</li>
             <li>Defaults: <b>Work 0:20</b>, <b>Rest 0:10</b>.</li>
@@ -373,7 +374,7 @@
   </div>
 
   <!-- Permanent footer badge (bottom-right) -->
-  <div class="footer" id="footerBadge">v9</div>
+  <div class="footer" id="footerBadge">v10</div>
 
   <!-- Toast -->
   <div id="toast" class="toast">Repetitions reset to 1</div>
@@ -443,13 +444,16 @@
 
     // Stopwatch (always visible)
     swElapsed: 0,            // seconds accumulated
-    swLastStart: 0           // performance.now when last started
+    swLastStart: 0,          // performance.now when last started
+
+    // v10 hint timing
+    pauseHintUntil: 0        // performance.now() + 5000 when entering pause
   };
 
   // ----- Persistence -----
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v35')||'{}');
+      const saved = JSON.parse(localStorage.getItem('tabata_v36')||'{}');
       if(Number.isFinite(saved.work)) state.work = saved.work;
       if(Number.isFinite(saved.rest)) state.rest = saved.rest;
       if(typeof saved.muted==='boolean') state.muted = saved.muted;
@@ -460,7 +464,7 @@
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v35', JSON.stringify({
+    localStorage.setItem('tabata_v36', JSON.stringify({
       work:state.work, rest:state.rest, muted:state.muted, volume:state.volume,
       rep:state.rep, controlsHidden:state.controlsHidden, swElapsed:state.swElapsed
     }));
@@ -489,6 +493,8 @@
   const volChip = $('volChip');
   const startBtn = $('startBtn');
   const resetBtn = $('resetBtn');
+  const actionRow = $('actionRow');
+  const hintLine = $('hintLine');
 
   const openSettingsBtn = $('openSettings');
   const toggleSettingsBtn = $('toggleSettings');
@@ -591,18 +597,27 @@
     stopwatchText.textContent = fmt(sw);
   }
 
-  // v9: Hide/show top controls based on play/pause
-  function updateTopControlsVisibility(){
+  // v10: Hide/show controls & hint based on play/pause plus user swipe for top controls
+  function updateControlsVisibility(){
     const playing = state.running;
-    // User swipe toggle still applies, but v9 says: when playing always hide these.
-    const shouldHideMeta = playing || state.controlsHidden;
-    const shouldHideChips = playing || state.controlsHidden;
-    const shouldHideSettingsBtn = playing || state.controlsHidden;
 
-    metaTags.style.display = shouldHideMeta ? 'none' : '';
-    soundChip.style.display = shouldHideChips ? 'none' : '';
-    volChip.style.display   = shouldHideChips ? 'none' : '';
-    openSettingsBtn.style.display = shouldHideSettingsBtn ? 'none' : '';
+    // Top group (Work/Rest tags, Sound/Vol, Settings)
+    const shouldHideTop = playing || state.controlsHidden;
+    metaTags.style.display   = shouldHideTop ? 'none' : '';
+    soundChip.style.display  = shouldHideTop ? 'none' : '';
+    volChip.style.display    = shouldHideTop ? 'none' : '';
+    openSettingsBtn.style.display = shouldHideTop ? 'none' : '';
+
+    // Start/Reset row hidden in play
+    actionRow.style.display  = playing ? 'none' : '';
+
+    // Hint: hidden in play; visible only for first 5s after entering pause
+    if (playing) {
+      hintLine.style.display = 'none';
+    } else {
+      const show = performance.now() <= state.pauseHintUntil;
+      hintLine.style.display = show ? '' : 'none';
+    }
   }
 
   function updateAllUI(){
@@ -624,7 +639,7 @@
     startBtn.setAttribute('aria-pressed', String(state.running));
 
     updateStopwatchUI();
-    updateTopControlsVisibility();
+    updateControlsVisibility();
   }
 
   // init
@@ -649,7 +664,7 @@
   function commitDigits(kind){
     const secs = readDigits(kind);
     if(kind==='work') state.work = secs; else state.rest = secs;
-    persist(); updateMetaTop(); updateStartEnabled(); updateAllUI();
+    persist(); updateStartEnabled(); updateAllUI();
   }
   qsa('.digit-grid').forEach(grid=>{
     grid.addEventListener('click', (e)=>{
@@ -697,7 +712,10 @@
     updateAllUI();
   }
   function pause(){
-    if(!state.running) return;
+    if(!state.running) {
+      // still show hint for 5s when you tap-pause while already paused? keep as-is: only when transitioning to pause from running.
+      return;
+    }
     state.running=false;
     if(rafId) cancelAnimationFrame(rafId);
     rafId=null;
@@ -707,7 +725,11 @@
       state.swLastStart = 0;
       persist();
     }
+    // v10: show bottom hint for 5 seconds after pausing
+    state.pauseHintUntil = performance.now() + 5000;
     updateAllUI();
+    // schedule one more UI update to hide hint after 5s
+    setTimeout(()=>updateAllUI(), 5200);
   }
   function toggleStartPause(){ state.running ? pause() : start(); }
 
@@ -874,7 +896,7 @@
     persist();
     populateDigits('work', state.work);
     populateDigits('rest', state.rest);
-    updateMetaTop(); updateStartEnabled(); updateAllUI();
+    updateStartEnabled(); updateAllUI();
     showToast('Times zeroed • Reps reset • Stopwatch reset');
   });
 
