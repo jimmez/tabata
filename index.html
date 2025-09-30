@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Tabata Timer</title>
+<title>Tabata Timer v11</title>
 
-<!-- PWA-ish (hide browser chrome when added to Home Screen) -->
+<!-- PWA-ish -->
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -58,35 +58,32 @@
   .app{
     position:relative; z-index:1; max-width:820px; margin:0 auto;
     min-height:100%; display:flex; flex-direction:column;
-    gap:10px; padding:8px 12px 92px;  /* room for footer badge */
+    padding:8px 12px 92px;  /* room for footer badge */
+    gap:0;
   }
 
-  /* VERY TOP: Work/Rest + Stopwatch */
-  .meta-top{
-    display:flex; align-items:center; justify-content:flex-start; gap:10px; flex-wrap:wrap;
-    font-size:12px; color:#bbb; opacity:.95; padding:4px 0 2px; min-height:32px;
+  /* Fixed-height header so clock never shifts vertically */
+  .header{
+    height:44px; display:flex; align-items:center; gap:10px;
+    font-size:12px; color:#bbb; opacity:.95; padding:2px 0;
   }
-  .meta-top .tag{
+  .tag{
     background:var(--muted2); border:1px solid var(--border);
     border-radius:999px; padding:6px 10px; display:flex; align-items:center; gap:6px;
   }
-  .meta-tags{} /* this group is hidden while playing */
-  .stopwatch{display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:999px;}
-  .stopwatch .icon{font-size:16px; opacity:.95}
-  .stopwatch b{font-size:18px; font-weight:1000; letter-spacing:.02em;}
-  @media (max-width:420px){
-    .stopwatch b{font-size:17px}
-  }
+  .tag .icon{font-size:16px}
+  .tag b{font-size:16px; font-weight:1000; letter-spacing:.02em;}
+  .workrest{display:flex; gap:8px; align-items:center;}
+  .workrest.hidden{visibility:hidden;} /* reserve space, no layout shift */
 
-  /* TOP-RIGHT: Big REP + info */
+  /* Rep + Help pinned top-right (doesn't affect clock flow) */
   .top-right{
     position:fixed; top:6px; right:8px; z-index:11; display:flex; align-items:center; gap:8px;
   }
   .rep-big{
     background:transparent; border:none; color:#fff; cursor:pointer; user-select:none;
     font-weight:1000; line-height:1; letter-spacing:.02em;
-    font-size:72px; /* a bit smaller than the countdown */
-    text-shadow:0 2px 10px rgba(0,0,0,.35);
+    font-size:72px; text-shadow:0 2px 10px rgba(0,0,0,.35);
   }
   .pill{
     background:var(--muted2); color:#bbb; border:1px solid var(--border);
@@ -94,48 +91,10 @@
   }
   .pill:active{transform:translateY(1px)}
 
-  /* Topbar (parts are hidden while playing) */
-  .topbar{
-    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap
-  }
-  .chip{
-    display:inline-flex; align-items:center; gap:8px; padding:8px 12px;
-    background:var(--muted2); border:1px solid var(--border); border-radius:999px; font-size:14px
-  }
-  .switch{position:relative; width:56px; height:32px; background:#333; border:1px solid var(--border); border-radius:999px; cursor:pointer}
-  .switch input{display:none}
-  .knob{position:absolute; top:2px; left:2px; width:28px; height:28px; border-radius:50%; background:#777; transition:all .18s ease}
-  .switch input:checked + .knob{left:26px; background:#34d399}
-  input[type="range"]{accent-color:#34d399}
-
-  /* Buttons */
-  .btn{
-    appearance:none; border:1px solid var(--border);
-    background:var(--muted); color:rgba(255,255,255,.85);
-    padding:12px 16px; border-radius:14px; font-weight:800; cursor:pointer; touch-action:manipulation;
-    box-shadow:none;
-  }
-  .btn:hover{background:var(--muted2)}
-  .btn:active{transform:translateY(1px)}
-  .btn-xxl{font-size:22px; padding:14px 18px; border-radius:16px; min-width:150px}
-  .btn.disabled{opacity:.45; filter:grayscale(.2); cursor:not-allowed}
-  .btn.active{ outline:2px solid rgba(255,255,255,.12); }
-
-  /* Big Settings button */
-  .btn-settings-big{
-    width:100%; max-width:220px; font-size:20px; padding:14px 16px; border-radius:14px;
-    display:block; margin-top:8px;
-  }
-
-  /* Screens */
-  .screen{display:none}
-  .screen.active{display:block}
-
-  /* Timer layout */
-  .timer{ text-align:center; padding:0 6px}
+  /* Clock area stays centered and never moves */
   .midwrap{
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    min-height:56vh;
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:0 6px;
   }
   .pause-banner{
     display:none; font-size:48px; font-weight:1000; letter-spacing:.12em;
@@ -146,16 +105,33 @@
   .clock{font-size:112px; font-weight:900; line-height:1; letter-spacing:.02em; margin:6px 0}
   .phase{font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin-top:6px}
 
-  /* ACTIONS */
-  .actions{
-    display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:flex-start;
-    margin-top:4px;
+  /* Bottom controls & settings (live below so clock never shifts) */
+  .bottom{
+    display:flex; flex-direction:column; gap:12px; align-items:center; margin:10px 0 0;
   }
-  .actions .row{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
-  .hint{font-size:12px; opacity:.8}
+  .row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center}
+  .chip{
+    display:inline-flex; align-items:center; gap:8px; padding:8px 12px;
+    background:var(--muted2); border:1px solid var(--border); border-radius:999px; font-size:14px
+  }
+  .switch{position:relative; width:56px; height:32px; background:#333; border:1px solid var(--border); border-radius:999px; cursor:pointer}
+  .switch input{display:none}
+  .knob{position:absolute; top:2px; left:2px; width:28px; height:28px; border-radius:50%; background:#777; transition:all .18s ease}
+  .switch input:checked + .knob{left:26px; background:#34d399}
+  input[type="range"]{accent-color:#34d399}
 
-  /* Settings */
-  .settings{background:var(--muted2); border:1px solid var(--border); border-radius:14px; padding:10px 12px}
+  .btn{
+    appearance:none; border:1px solid var(--border);
+    background:var(--muted); color:rgba(255,255,255,.85);
+    padding:12px 16px; border-radius:14px; font-weight:800; cursor:pointer; touch-action:manipulation;
+    box-shadow:none;
+  }
+  .btn:hover{background:var(--muted2)}
+  .btn:active{transform:translateY(1px)}
+  .btn-xxl{font-size:22px; padding:14px 18px; border-radius:16px; min-width:150px}
+  .btn.disabled{opacity:.45; filter:grayscale(.2); cursor:not-allowed}
+
+  .settings{background:var(--muted2); border:1px solid var(--border); border-radius:14px; padding:10px 12px; width:100%; max-width:860px}
   h2{margin:4px 0 8px; font-size:16px; text-transform:uppercase; letter-spacing:.07em}
   .block{background:var(--muted); border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:8px}
   .digit-grid{display:grid; grid-template-columns:repeat(4, minmax(44px,1fr)); gap:8px; max-width:360px; margin:0 auto}
@@ -171,6 +147,7 @@
     border:1px solid var(--border); color:var(--fg); font-weight:900; font-size:18px; touch-action:manipulation
   }
   .dlabel{font-size:11px; opacity:.8}
+
   .settings-cta{display:flex; justify-content:center; gap:10px; margin-top:6px}
   .settings-cta .btn{padding:12px 16px; font-size:18px; border-radius:12px; min-width:140px}
 
@@ -202,7 +179,7 @@
 
   /* Dynamic colors by mode */
   body.mode-work .phase,
-  body.mode-work .meta-top{ color:var(--letters-work); }
+  body.mode-work .header{ color:var(--letters-work); }
   body.mode-rest .clock{ color:var(--nums-rest); }
   body.mode-pause .clock{ color:var(--nums-pause); }
   body.mode-pause .pause-banner{ display:block; }
@@ -222,15 +199,13 @@
   <div id="progressFull" class="progress-full"></div>
 
   <div class="app" id="app">
-    <!-- VERY TOP: Work/Rest + Stopwatch -->
-    <div class="meta-top">
-      <span class="meta-tags" id="metaTags">
+    <!-- Fixed-height header (reserves space; no clock shift) -->
+    <div class="header">
+      <span class="workrest" id="workRestHeader">
         <span class="tag">Work <b id="workGoalTop">00:20</b></span>
         <span class="tag">Rest <b id="restGoalTop">00:10</b></span>
       </span>
-      <span class="tag stopwatch">
-        <span class="icon">⏱️</span><b id="stopwatchText">00:00</b>
-      </span>
+      <span class="tag"><span class="icon">⏱️</span><b id="stopwatchText">00:00</b></span>
     </div>
 
     <!-- TOP-RIGHT: Big REP + info -->
@@ -239,51 +214,39 @@
       <button id="openHelp" class="pill" aria-label="Open instructions">ℹ️</button>
     </div>
 
-    <!-- CONTROLS BAR -->
-    <div class="topbar">
-      <div class="left" style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <label class="chip" id="soundChip" title="Toggle all sounds">
-            <span>Sound</span>
-            <div class="switch">
-              <input type="checkbox" id="soundToggle" checked />
-              <div class="knob"></div>
-            </div>
-          </label>
-          <label class="chip" id="volChip" title="Volume">
-            <span>Vol</span>
-            <input id="volume" type="range" min="0" max="100" value="70" />
-          </label>
-        </div>
-        <!-- Settings button (hidden while playing) -->
-        <button class="btn btn-settings-big" id="openSettings">⚙️ Settings</button>
-      </div>
-      <div class="right"></div>
+    <!-- CLOCK (stays centered, never moves) -->
+    <div class="midwrap" id="timerArea">
+      <div class="pause-banner" id="pauseBanner">PAUSE</div>
+      <div class="clock" id="clock">00:20</div>
+      <div class="phase" id="phase">Work</div>
     </div>
 
-    <!-- TIMER SCREEN (MAIN) -->
-    <section id="timerScreen" class="screen active">
-      <div class="timer" id="timerArea">
-        <div class="midwrap">
-          <div class="pause-banner" id="pauseBanner">PAUSE</div>
-          <div class="clock" id="clock">00:20</div>
-          <div class="phase" id="phase">Work</div>
-        </div>
-
-        <!-- ACTIONS directly under the numbers -->
-        <div class="actions">
-          <div class="row" id="actionRow">
-            <button id="startBtn" class="btn btn-xxl" aria-pressed="false">▶️ Start / Pause</button>
-            <button id="resetBtn" class="btn btn-xxl" title="Reset repetitions to 1">⏹ Reset Reps</button>
-          </div>
-          <div class="hint" id="hintLine">Tap anywhere to Start/Pause • Swipe left/right to show/hide top controls</div>
-        </div>
+    <!-- BOTTOM: actions + settings (below the numbers) -->
+    <div class="bottom">
+      <!-- Actions -->
+      <div class="row" id="actionRow">
+        <button id="startBtn" class="btn btn-xxl" aria-pressed="false">▶️ Start / Pause</button>
+        <button id="resetBtn" class="btn btn-xxl" title="Reset repetitions to 1">⏹ Reset Reps</button>
+        <button class="btn btn-xxl" id="openSettings">⚙️ Settings</button>
       </div>
-    </section>
 
-    <!-- SETTINGS SCREEN -->
-    <section id="settingsScreen" class="screen">
-      <div class="settings">
+      <!-- Sound & Volume -->
+      <div class="row" id="audioRow">
+        <label class="chip" id="soundChip" title="Toggle all sounds">
+          <span>Sound</span>
+          <div class="switch">
+            <input type="checkbox" id="soundToggle" checked />
+            <div class="knob"></div>
+          </div>
+        </label>
+        <label class="chip" id="volChip" title="Volume">
+          <span>Vol</span>
+          <input id="volume" type="range" min="0" max="100" value="70" />
+        </label>
+      </div>
+
+      <!-- Settings (inline below) -->
+      <div class="settings" id="settingsBlock" hidden>
         <h2>Work</h2>
         <div class="block" id="blockWork">
           <div class="digit-grid" data-kind="work">
@@ -345,26 +308,24 @@
         </div>
 
         <div class="settings-cta">
-          <button class="btn" id="backToTimer">↩️ Back</button>
+          <button class="btn" id="settingsClose">↩️ Back</button>
           <button class="btn" id="settingsReset" title="Zero times + Reset reps + Reset stopwatch">⏹ Reset</button>
-          <button class="btn btn-settings-big" id="toggleSettings">⚙️ Settings</button>
         </div>
-        <div class="hint">Reset here: zeros Work/Rest, resets Reps to 1, resets the Stopwatch.</div>
+        <div class="dlabel" style="text-align:center; margin-top:6px;">Changes auto-save.</div>
       </div>
-    </section>
+    </div>
 
     <!-- HELP / INSTRUCTIONS -->
-    <section id="helpScreen" class="screen">
+    <section id="helpScreen" class="screen" style="display:none;">
       <div class="helpwrap">
         <div class="help">
           <h3>How it works</h3>
           <ul>
             <li><b>Tap anywhere</b> on the main timer to Start / Pause / Resume.</li>
-            <li><b>Swipe left/right</b> (or click-drag on desktop) to show/hide the top controls.</li>
-            <li><b>Playing</b> hides Work/Rest tags, Sound/Vol and Settings, and also Start/Reset buttons + bottom hint.</li>
-            <li><b>Pause</b> shows them; the bottom hint is shown for <b>5 seconds</b> after pausing.</li>
-            <li>Main <b>Reset Reps</b>: resets reps to 1 and resets the stopwatch.</li>
-            <li>Settings <b>Reset</b>: zeros times, resets reps to 1, resets the stopwatch.</li>
+            <li>Controls live <b>below</b> the numbers so the countdown never shifts.</li>
+            <li><b>Playing</b> hides Settings/Sound/Volume and Start/Reset; <b>Pause</b> shows them.</li>
+            <li>Reset Reps: resets reps to 1 and resets the stopwatch.</li>
+            <li>Settings Reset: zeros times, resets reps to 1, resets the stopwatch.</li>
             <li>Defaults: <b>Work 0:20</b>, <b>Rest 0:10</b>.</li>
             <li><button class="btn" id="backFromHelp">← Back</button></li>
           </ul>
@@ -373,285 +334,185 @@
     </section>
   </div>
 
-  <!-- Permanent footer badge (bottom-right) -->
-  <div class="footer" id="footerBadge">v10</div>
+  <!-- Version badge -->
+  <div class="footer" id="footerBadge">v11</div>
 
   <!-- Toast -->
   <div id="toast" class="toast">Repetitions reset to 1</div>
 
 <script>
-  // ----- Minimal manifest injection for standalone display -----
+  // ---- Minimal manifest for standalone ----
   (function addManifest(){
     const manifest = {
-      "name":"Tabata Timer",
-      "short_name":"Tabata",
-      "start_url":"./",
-      "display":"standalone",
-      "theme_color":"#000000",
-      "background_color":"#000000",
-      "icons":[]
+      name:"Tabata Timer", short_name:"Tabata", start_url:"./", display:"standalone",
+      theme_color:"#000000", background_color:"#000000", icons:[]
     };
     const blob = new Blob([JSON.stringify(manifest)], {type:"application/manifest+json"});
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('link');
-    link.rel = 'manifest'; link.href = url;
-    document.head.appendChild(link);
+    const link = document.createElement('link'); link.rel='manifest'; link.href=url; document.head.appendChild(link);
   })();
 
-  // ----- Try enter fullscreen on first user interaction -----
-  let triedFS = false;
-  function tryFullscreen(){
-    if(triedFS) return; triedFS = true;
-    const el = document.documentElement;
-    if(el.requestFullscreen){
-      el.requestFullscreen().catch(()=>{});
-    } else if(el.webkitRequestFullscreen){
-      el.webkitRequestFullscreen();
-    }
+  // ---- Fullscreen on first interaction ----
+  let triedFS=false;
+  function tryFS(){ if(triedFS) return; triedFS=true;
+    const el=document.documentElement;
+    (el.requestFullscreen?.bind(el) || el.webkitRequestFullscreen?.bind(el) || (()=>Promise.resolve()))().catch(()=>{});
   }
-  document.addEventListener('pointerdown', tryFullscreen, {once:true});
+  document.addEventListener('pointerdown', tryFS, {once:true});
 
-  // ----- Utilities -----
+  // ---- Utils ----
   const $ = id => document.getElementById(id);
   const qs = (s, r=document) => r.querySelector(s);
   const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
-  const clamp = (v,min,max) => Math.min(max, Math.max(min, v));
+  const clamp = (v,min,max)=>Math.min(max,Math.max(min,v));
   const pad = n => String(n).padStart(2,'0');
-  const fmt = secs => {
-    secs = Math.max(0, Math.round(secs));
-    const h = Math.floor(secs/3600);
-    const m = Math.floor((secs%3600)/60);
-    const s = secs%60;
-    return h>0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
-  };
-  const toast = $('toast');
-  const showToast = (txt)=>{
-    toast.textContent=txt; toast.classList.add('show');
-    setTimeout(()=>toast.classList.remove('show'), 1200);
-  };
+  const fmt = secs => { secs=Math.max(0,Math.round(secs));
+    const h=Math.floor(secs/3600), m=Math.floor((secs%3600)/60), s=secs%60;
+    return h>0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`; };
+  const toast=$('toast');
+  const showToast = t => { toast.textContent=t; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),1200); };
 
-  // ----- State (defaults work=20, rest=10) -----
+  // ---- State (defaults 20/10) ----
   const state = {
-    work: 20, rest: 10,
-    phase: 'work',
-    running: false,
-    startTs: 0,
-    elapsed: 0,
-    rep: 1,
-    muted: false,
-    volume: 0.7,
-    controlsHidden: false, // user swipe toggle for top controls group
+    work:20, rest:10,
+    phase:'work',
+    running:false,
+    startTs:0, elapsed:0,
+    rep:1,
+    muted:false, volume:0.7,
 
-    // Stopwatch (always visible)
-    swElapsed: 0,            // seconds accumulated
-    swLastStart: 0,          // performance.now when last started
-
-    // v10 hint timing
-    pauseHintUntil: 0        // performance.now() + 5000 when entering pause
+    // Stopwatch
+    swElapsed:0, swLastStart:0
   };
 
-  // ----- Persistence -----
+  // ---- Persistence ----
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v36')||'{}');
-      if(Number.isFinite(saved.work)) state.work = saved.work;
-      if(Number.isFinite(saved.rest)) state.rest = saved.rest;
-      if(typeof saved.muted==='boolean') state.muted = saved.muted;
-      if(Number.isFinite(saved.volume)) state.volume = saved.volume;
-      if(typeof saved.rep==='number') state.rep = Math.max(1, Math.floor(saved.rep));
-      if(typeof saved.controlsHidden==='boolean') state.controlsHidden = saved.controlsHidden;
-      if(Number.isFinite(saved.swElapsed)) state.swElapsed = saved.swElapsed;
+      const saved = JSON.parse(localStorage.getItem('tabata_v37')||'{}');
+      for(const k of ['work','rest','rep','muted','volume','swElapsed']){
+        if(saved[k]!==undefined){
+          if(k==='muted') state[k]=!!saved[k];
+          else if(k==='volume') state[k]=+saved[k];
+          else state[k]=+saved[k];
+        }
+      }
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v36', JSON.stringify({
-      work:state.work, rest:state.rest, muted:state.muted, volume:state.volume,
-      rep:state.rep, controlsHidden:state.controlsHidden, swElapsed:state.swElapsed
+    localStorage.setItem('tabata_v37', JSON.stringify({
+      work:state.work, rest:state.rest, rep:state.rep,
+      muted:state.muted, volume:state.volume, swElapsed:state.swElapsed
     }));
   }
 
-  // ----- Elements -----
-  const app = $('app');
-  const timerScreen = $('timerScreen');
-  const settingsScreen = $('settingsScreen');
-  const helpScreen = $('helpScreen');
-
-  const pauseBanner = $('pauseBanner');
-  const phaseEl = $('phase');
-  const clockEl = $('clock');
-  const repBtn = $('repBtn');
-
-  const metaTags = $('metaTags');
+  // ---- Elements ----
+  const progressFull = $('progressFull');
+  const workRestHeader = $('workRestHeader');
   const workGoalTopEl = $('workGoalTop');
   const restGoalTopEl = $('restGoalTop');
+  const stopwatchText = $('stopwatchText');
 
-  const progressFull = $('progressFull');
+  const pauseBanner = $('pauseBanner');
+  const clockEl = $('clock');
+  const phaseEl = $('phase');
+  const repBtn = $('repBtn');
+
+  const startBtn = $('startBtn');
+  const resetBtn = $('resetBtn');
+  const openSettingsBtn = $('openSettings');
+  const settingsBlock = $('settingsBlock');
+  const settingsClose = $('settingsClose');
+  const settingsReset = $('settingsReset');
 
   const soundToggle = $('soundToggle');
   const volumeInput = $('volume');
   const soundChip = $('soundChip');
   const volChip = $('volChip');
-  const startBtn = $('startBtn');
-  const resetBtn = $('resetBtn');
-  const actionRow = $('actionRow');
-  const hintLine = $('hintLine');
 
-  const openSettingsBtn = $('openSettings');
-  const toggleSettingsBtn = $('toggleSettings');
-  const stopwatchText = $('stopwatchText');
-
-  // ----- Topbar -----
+  // ---- Audio toggles ----
   soundToggle.checked = !state.muted;
   volumeInput.value = Math.round(state.volume*100);
   soundToggle.addEventListener('change', ()=>{ state.muted = !soundToggle.checked; persist(); });
   volumeInput.addEventListener('input', ()=>{ state.volume = clamp(+volumeInput.value/100,0,1); persist(); });
 
-  // ----- Navigation -----
-  $('openHelp').addEventListener('click', ()=> showScreen('help'));
-  $('backFromHelp').addEventListener('click', ()=> showScreen('timer'));
-  $('backToTimer').addEventListener('click', ()=> showScreen('timer'));
-
-  function onSettingsPressed(){
-    if(settingsScreen.classList.contains('active')){
-      showScreen('timer');
-    } else {
-      openSettings();
-    }
-  }
-  openSettingsBtn.addEventListener('click', onSettingsPressed);
-  if(toggleSettingsBtn) toggleSettingsBtn.addEventListener('click', onSettingsPressed);
-
-  function showScreen(which){
-    const map = {timer:timerScreen, settings:settingsScreen, help:helpScreen};
-    for(const [k,sec] of Object.entries(map)){
-      if(k===which) sec.classList.add('active'); else sec.classList.remove('active');
-    }
-    if(which==='settings'){ state.controlsHidden = false; } // ensure controls visible when editing
-    updateAllUI();
-  }
-  function openSettings(){
-    pause(); showScreen('settings');
-    populateDigits('work', state.work);
-    populateDigits('rest', state.rest);
-  }
-
-  // ----- Helpers -----
+  // ---- UI helpers ----
   function secsToParts(s){ s=Math.max(0,Math.round(s)); return {m:Math.floor(s/60), s:s%60}; }
-  function partsToSecs(mt,mo,st,so){ let m=mt*10+mo, sec=st*10+so; m=clamp(m,0,59); sec=clamp(sec,0,59); return m*60+sec; }
-
-  function updateMetaTop(){
+  function updateHeader(){
     const wp=secsToParts(state.work), rp=secsToParts(state.rest);
-    workGoalTopEl.textContent = String(pad(wp.m)+':'+pad(wp.s));
-    restGoalTopEl.textContent = String(pad(rp.m)+':'+pad(rp.s));
+    workGoalTopEl.textContent = `${pad(wp.m)}:${pad(wp.s)}`;
+    restGoalTopEl.textContent = `${pad(rp.m)}:${pad(rp.s)}`;
     repBtn.textContent = String(state.rep);
   }
-
-  function updateStartEnabled(){
-    const allow = (state.work>0 || state.rest>0);
-    startBtn.classList.toggle('disabled', !allow);
-    startBtn.disabled = !allow;
-  }
-
   function currentTotal(){ return state.phase==='work' ? state.work : state.rest; }
-  function remainingSeconds(){
-    const total = currentTotal();
-    return Math.max(0, Math.round(total - state.elapsed));
-  }
+  function remainingSeconds(){ return Math.max(0, Math.round(currentTotal() - state.elapsed)); }
 
   function setModeClasses(){
     document.body.classList.remove('mode-work','mode-rest','mode-pause');
     if(!state.running && state.elapsed>0){
       document.body.classList.add('mode-pause'); document.body.style.background='var(--bg-pause)';
-      pauseBanner.style.display = 'block';
+      pauseBanner.style.display='block';
     } else {
-      pauseBanner.style.display = 'none';
-      if(state.phase==='rest'){
-        document.body.classList.add('mode-rest'); document.body.style.background='var(--bg-rest)';
-      } else {
-        document.body.classList.add('mode-work'); document.body.style.background='var(--bg-work)';
-      }
+      pauseBanner.style.display='none';
+      if(state.phase==='rest'){ document.body.classList.add('mode-rest'); document.body.style.background='var(--bg-rest)'; }
+      else { document.body.classList.add('mode-work'); document.body.style.background='var(--bg-work)'; }
     }
   }
-
-  function updateProgressAndBackground(){
-    const total = currentTotal();
-    const frac = total>0 ? Math.min(state.elapsed/total, 1) : 1;   // rise from bottom
-    const minVH = 6;
+  function updateProgress(){
+    const total=currentTotal();
+    const frac = total>0 ? Math.min(state.elapsed/total,1) : 1;
+    const minVH=6;
     progressFull.style.height = (Math.max(minVH, frac*100)).toFixed(2)+'vh';
-
     if(state.phase==='work'){
-      progressFull.style.background = 'linear-gradient(to top, var(--work1), var(--work2))';
-      progressFull.style.boxShadow = '0 -10px 30px rgba(34,197,94,.35)';
-    } else {
-      progressFull.style.background = 'linear-gradient(to top, var(--rest1), var(--rest2))';
-      progressFull.style.boxShadow = '0 -10px 30px rgba(239,68,68,.35)';
+      progressFull.style.background='linear-gradient(to top, var(--work1), var(--work2))';
+      progressFull.style.boxShadow='0 -10px 30px rgba(34,197,94,.35)';
+    }else{
+      progressFull.style.background='linear-gradient(to top, var(--rest1), var(--rest2))';
+      progressFull.style.boxShadow='0 -10px 30px rgba(239,68,68,.35)';
     }
   }
-
-  function updateStopwatchUI(){
-    // Show live value; if running, preview includes current run segment
+  function updateStopwatch(){
     let sw = state.swElapsed;
-    if(state.running && state.swLastStart){
-      sw += (performance.now() - state.swLastStart)/1000;
-    }
+    if(state.running && state.swLastStart){ sw += (performance.now()-state.swLastStart)/1000; }
     stopwatchText.textContent = fmt(sw);
   }
-
-  // v10: Hide/show controls & hint based on play/pause plus user swipe for top controls
-  function updateControlsVisibility(){
+  function updatePlayPauseVisibility(){
     const playing = state.running;
+    // Header Work/Rest: hide (via visibility) while playing; visible when paused
+    workRestHeader.classList.toggle('hidden', playing);
 
-    // Top group (Work/Rest tags, Sound/Vol, Settings)
-    const shouldHideTop = playing || state.controlsHidden;
-    metaTags.style.display   = shouldHideTop ? 'none' : '';
-    soundChip.style.display  = shouldHideTop ? 'none' : '';
-    volChip.style.display    = shouldHideTop ? 'none' : '';
-    openSettingsBtn.style.display = shouldHideTop ? 'none' : '';
+    // Bottom controls: hide while playing, show when paused
+    const actionRow = $('actionRow');
+    const audioRow  = $('audioRow');
+    actionRow.style.display = playing ? 'none' : '';
+    audioRow.style.display   = playing ? 'none' : '';
 
-    // Start/Reset row hidden in play
-    actionRow.style.display  = playing ? 'none' : '';
-
-    // Hint: hidden in play; visible only for first 5s after entering pause
-    if (playing) {
-      hintLine.style.display = 'none';
-    } else {
-      const show = performance.now() <= state.pauseHintUntil;
-      hintLine.style.display = show ? '' : 'none';
-    }
+    // If we start playing while settings open, close them
+    if(playing && !settingsBlock.hidden){ settingsBlock.hidden=true; }
   }
-
   function updateAllUI(){
     phaseEl.textContent = state.phase==='work'?'Work':'Rest';
-    if(!state.running && state.elapsed>0){
-      clockEl.style.color = 'var(--nums-pause)';
-    } else if(state.phase==='rest'){
-      clockEl.style.color = 'var(--nums-rest)';
-    } else {
-      clockEl.style.color = 'var(--letters-work)';
-    }
-
     clockEl.textContent = fmt(remainingSeconds());
-    updateMetaTop();
-    updateProgressAndBackground();
+    if(!state.running && state.elapsed>0)      clockEl.style.color='var(--nums-pause)';
+    else if(state.phase==='rest')              clockEl.style.color='var(--nums-rest)';
+    else                                       clockEl.style.color='var(--letters-work)';
+
+    updateHeader();
+    updateProgress();
     setModeClasses();
+    updateStopwatch();
+    updatePlayPauseVisibility();
 
     startBtn.classList.toggle('active', state.running);
     startBtn.setAttribute('aria-pressed', String(state.running));
-
-    updateStopwatchUI();
-    updateControlsVisibility();
   }
 
-  // init
-  updateStartEnabled(); updateAllUI();
-
-  // ----- Digit editor (auto-save) -----
+  // ---- Digits editor (auto-save) ----
   function populateDigits(kind, secs){
     const grid = qs(`.digit-grid[data-kind="${kind}"]`);
     const {m,s} = secsToParts(secs);
     const mt=Math.floor(m/10), mo=m%10, st=Math.floor(s/10), so=s%10;
     const map={mt,mo,st,so};
-    qsa('.digit-box', grid).forEach(box=>{ qs('.digit',box).textContent = map[box.dataset.role]; });
+    qsa('.digit-box',grid).forEach(b=>{ qs('.digit',b).textContent = map[b.dataset.role]; });
   }
   function readDigits(kind){
     const grid = qs(`.digit-grid[data-kind="${kind}"]`);
@@ -664,7 +525,7 @@
   function commitDigits(kind){
     const secs = readDigits(kind);
     if(kind==='work') state.work = secs; else state.rest = secs;
-    persist(); updateStartEnabled(); updateAllUI();
+    persist(); updateHeader(); updateAllUI();
   }
   qsa('.digit-grid').forEach(grid=>{
     grid.addEventListener('click', (e)=>{
@@ -673,17 +534,16 @@
 
       if(e.target===digitEl){
         const v = prompt('Enter a digit (0–9):', digitEl.textContent);
-        if(v==null) return; const d = Number(v.trim());
+        if(v==null) return; const d=Number(v.trim());
         if(Number.isInteger(d) && d>=0 && d<=9){
-          const role = box.dataset.role;
-          const max=(role==='mt'||role==='st')?5:9;
-          digitEl.textContent = String(Math.min(max, Math.max(0, d)));
+          const role=box.dataset.role; const max=(role==='mt'||role==='st')?5:9;
+          digitEl.textContent = String(Math.min(max, Math.max(0,d)));
           commitDigits(grid.dataset.kind);
         }
       }
-      const actBtn = e.target.closest('button[data-act]');
-      if(actBtn){
-        const role = box.dataset.role; let cur=+digitEl.textContent; const inc=actBtn.dataset.act==='inc';
+      const act = e.target.closest('button[data-act]');
+      if(act){
+        const role=box.dataset.role; let cur=+digitEl.textContent; const inc=act.dataset.act==='inc';
         const max=(role==='mt'||role==='st')?5:9, min=0;
         cur = inc?cur+1:cur-1; if(cur>max)cur=min; if(cur<min)cur=max;
         digitEl.textContent=String(cur);
@@ -692,172 +552,15 @@
     });
   });
 
-  // ----- Timer engine (Counts down) -----
+  // ---- Timer engine ----
   let rafId=null;
+  let audioCtx=null;
+  const HALF_OCT=Math.SQRT2;
 
   function ensureAudio(){
     if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
     if(audioCtx.state==='suspended'){ audioCtx.resume(); }
   }
-  function start(){
-    if(!(state.work>0 || state.rest>0)) return;
-    if(state.running) return;
-    ensureAudio();
-    state.running=true;
-    state.startTs = performance.now() - state.elapsed*1000;
-    // start stopwatch segment
-    state.swLastStart = performance.now();
-    if(state.elapsed===0){ runPhaseTone(); }
-    loop();
-    updateAllUI();
-  }
-  function pause(){
-    if(!state.running) {
-      // still show hint for 5s when you tap-pause while already paused? keep as-is: only when transitioning to pause from running.
-      return;
-    }
-    state.running=false;
-    if(rafId) cancelAnimationFrame(rafId);
-    rafId=null;
-    // accumulate stopwatch and pause it
-    if(state.swLastStart){
-      state.swElapsed += (performance.now() - state.swLastStart)/1000;
-      state.swLastStart = 0;
-      persist();
-    }
-    // v10: show bottom hint for 5 seconds after pausing
-    state.pauseHintUntil = performance.now() + 5000;
-    updateAllUI();
-    // schedule one more UI update to hide hint after 5s
-    setTimeout(()=>updateAllUI(), 5200);
-  }
-  function toggleStartPause(){ state.running ? pause() : start(); }
-
-  function restartCurrentPhase(){
-    const wasRunning=state.running;
-    pause();
-    state.elapsed=0;
-    state.startTs = performance.now();
-    runPhaseTone();
-    if(wasRunning) start(); else updateAllUI();
-  }
-  function nextPhase(){
-    const wasRunning=state.running;
-    pause();
-    if(state.phase==='work'){ state.phase='rest'; }
-    else { state.phase='work'; state.rep += 1; }
-    state.elapsed=0;
-    state.startTs = performance.now();
-    runPhaseTone();
-    persist();
-    if(wasRunning) start(); else updateAllUI();
-  }
-  function switchPhaseAuto(){
-    if(state.phase==='work'){ state.phase='rest'; }
-    else { state.phase='work'; state.rep += 1; persist(); }
-    state.elapsed=0; state.startTs=performance.now();
-    runPhaseTone(); updateAllUI();
-  }
-
-  function loop(){
-    if(!state.running) return;
-    const total = currentTotal();
-    const now = performance.now();
-    state.elapsed = Math.max(0, (now - state.startTs)/1000);
-
-    // live stopwatch preview (fast update)
-    updateStopwatchUI();
-
-    if(state.elapsed >= total){ switchPhaseAuto(); state.startTs = performance.now(); }
-    updateAllUI();
-    rafId = requestAnimationFrame(loop);
-  }
-
-  // Buttons
-  startBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggleStartPause(); });
-
-  // MAIN Reset button: reset all repetitions to 1 + restart current phase + reset stopwatch
-  function doResetReps(){
-    state.rep = 1;
-    state.swElapsed = 0;
-    if(state.running){
-      state.swLastStart = performance.now();
-    } else {
-      state.swLastStart = 0;
-    }
-    persist();
-    restartCurrentPhase();
-    showToast('Repetitions reset to 1 • Stopwatch reset');
-  }
-  resetBtn.addEventListener('click', (e)=>{ e.stopPropagation(); doResetReps(); });
-
-  // Anywhere taps on main timer (single-tap = toggle start/pause)
-  let tapCount = 0, tapTimer = null;
-  function commitTapActions(){
-    const c = tapCount; tapCount=0; clearTimeout(tapTimer); tapTimer=null;
-    if(c===1){ toggleStartPause(); }
-  }
-  timerScreen.addEventListener('pointerdown', (e)=>{
-    if(e.target.closest('button, input, label, .digit, .ud button, .settings, .chip')) return;
-    tapCount+=1;
-    if(tapTimer) clearTimeout(tapTimer);
-    tapTimer=setTimeout(commitTapActions, 280);
-  });
-
-  // Swipe to toggle visibility of the top controls group (user preference)
-  let swipeStartX=0, swipeStartY=0, swiping=false;
-  const SWIPE_THRESH = 60;   // px horizontal
-  const TAP_SLOP = 12;       // ignore tiny jitters
-  function onPointerDown(e){
-    if(e.target.closest('button, input, label, .digit, .ud button, .settings, .chip')) return;
-    swipeStartX = e.clientX; swipeStartY = e.clientY; swiping = true;
-  }
-  function onPointerMove(e){
-    if(!swiping) return;
-    const dx = e.clientX - swipeStartX;
-    const dy = e.clientY - swipeStartY;
-    if(Math.abs(dx) > SWIPE_THRESH && Math.abs(dx) > Math.abs(dy)+TAP_SLOP){
-      swiping = false;
-      state.controlsHidden = !state.controlsHidden;
-      persist(); updateAllUI();
-    }
-  }
-  function onPointerUp(){ swiping=false; }
-  timerScreen.addEventListener('pointerdown', onPointerDown);
-  timerScreen.addEventListener('pointermove', onPointerMove);
-  timerScreen.addEventListener('pointerup', onPointerUp);
-  timerScreen.addEventListener('pointercancel', onPointerUp);
-  timerScreen.addEventListener('pointerleave', onPointerUp);
-
-  // REP button
-  let repPressTimer=null; let repPressed=false;
-  repBtn.addEventListener('pointerdown', ()=>{
-    repPressed=true;
-    repPressTimer = setTimeout(()=>{
-      if(repPressed){ state.rep=1; persist(); updateAllUI(); showToast('Repetitions reset to 1'); }
-    }, 500);
-  });
-  repBtn.addEventListener('pointerup', ()=>{
-    if(repPressTimer){ clearTimeout(repPressTimer); repPressTimer=null; }
-    if(repPressed){ state.rep+=1; persist(); updateAllUI(); }
-    repPressed=false;
-  });
-  repBtn.addEventListener('pointerleave', ()=>{
-    repPressed=false;
-    if(repPressTimer){ clearTimeout(repPressTimer); repPressTimer=null; }
-  });
-
-  // Keyboard: any key toggles start/pause (except when editing / in settings/help)
-  document.addEventListener('keydown', (e)=>{
-    const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
-    if(tag==='INPUT' || tag==='TEXTAREA' || e.target.isContentEditable) return;
-    if(settingsScreen.classList.contains('active') || helpScreen.classList.contains('active')) return;
-    toggleStartPause();
-  });
-
-  // Audio
-  const HALF_OCT = Math.SQRT2;
-  let audioCtx=null;
   function beep(freq=440, dur=0.3, t0){
     if(state.muted) return 0;
     if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
@@ -866,61 +569,137 @@
     const now = t0 ?? ctx.currentTime;
     const osc=ctx.createOscillator();
     const gain=ctx.createGain();
-    osc.type='sine';
-    osc.frequency.value=freq;
+    osc.type='sine'; osc.frequency.value=freq;
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(state.volume*0.75, now+0.015);
     gain.gain.exponentialRampToValueAtTime(0.0001, now+dur);
     osc.connect(gain).connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now+dur+0.02);
+    osc.start(now); osc.stop(now+dur+0.02);
     return dur;
   }
-  function workTone(){ const base = 440 * HALF_OCT; beep(base, 0.5); }
+  function workTone(){ const base=440*HALF_OCT; beep(base,0.5); }
   function restTone(){
     const start = audioCtx ? audioCtx.currentTime : 0;
-    const hi = 784 * HALF_OCT;          // ~1108 Hz
-    const lo = 523 * HALF_OCT;          // ~739 Hz
-    const d1 = beep(hi, 0.3, start || undefined);
-    beep(lo, 0.3, (start||0) + d1 + 0.06);
+    const hi = 784*HALF_OCT;  // ~1108 Hz
+    const lo = 523*HALF_OCT;  // ~739 Hz
+    const d1 = beep(hi,0.3,start||undefined);
+    beep(lo,0.3,(start||0)+d1+0.06);
   }
-  function runPhaseTone(){ if(state.muted) return; (state.phase==='work') ? workTone() : restTone(); }
+  function runPhaseTone(){ if(state.muted) return; (state.phase==='work')?workTone():restTone(); }
 
-  // Settings Reset: zero times + reset reps to 1 + reset stopwatch
-  $('settingsReset').addEventListener('click', ()=>{
+  function start(){
+    if(!(state.work>0 || state.rest>0)) return;
+    if(state.running) return;
+    ensureAudio();
+    state.running=true;
+    state.startTs = performance.now() - state.elapsed*1000;
+    state.swLastStart = performance.now(); // stopwatch resume
+    if(state.elapsed===0){ runPhaseTone(); }
+    loop(); updateAllUI();
+  }
+  function pause(){
+    if(!state.running) return;
+    state.running=false;
+    if(rafId) cancelAnimationFrame(rafId); rafId=null;
+    if(state.swLastStart){
+      state.swElapsed += (performance.now()-state.swLastStart)/1000;
+      state.swLastStart=0; persist();
+    }
+    updateAllUI();
+  }
+  function toggleStartPause(){ state.running?pause():start(); }
+
+  function restartCurrentPhase(){
+    const wasRunning = state.running;
     pause();
-    state.work = 0; state.rest = 0;
-    state.rep = 1;
-    state.swElapsed = 0;
-    state.swLastStart = 0;
-    persist();
-    populateDigits('work', state.work);
-    populateDigits('rest', state.rest);
-    updateStartEnabled(); updateAllUI();
+    state.elapsed=0; state.startTs=performance.now();
+    runPhaseTone();
+    if(wasRunning) start(); else updateAllUI();
+  }
+  function nextPhase(){
+    const wasRunning = state.running;
+    pause();
+    if(state.phase==='work') state.phase='rest'; else { state.phase='work'; state.rep+=1; }
+    state.elapsed=0; state.startTs=performance.now(); runPhaseTone();
+    persist(); if(wasRunning) start(); else updateAllUI();
+  }
+  function switchPhaseAuto(){
+    if(state.phase==='work') state.phase='rest'; else { state.phase='work'; state.rep+=1; persist(); }
+    state.elapsed=0; state.startTs=performance.now(); runPhaseTone(); updateAllUI();
+  }
+
+  function loop(){
+    if(!state.running) return;
+    const total=currentTotal();
+    const now=performance.now();
+    state.elapsed = Math.max(0,(now-state.startTs)/1000);
+
+    updateStopwatch(); // live
+    if(state.elapsed>=total){ switchPhaseAuto(); state.startTs=performance.now(); }
+    updateAllUI();
+    rafId=requestAnimationFrame(loop);
+  }
+
+  // ---- Main interactions ----
+  // Tap anywhere on the timer to Start/Pause/Resume
+  let tapCount=0, tapTimer=null;
+  function commitTap(){ const c=tapCount; tapCount=0; clearTimeout(tapTimer); tapTimer=null; if(c===1) toggleStartPause(); }
+  $('timerArea').addEventListener('pointerdown', (e)=>{
+    if(e.target.closest('button, input, label, .digit, .ud button, .settings')) return;
+    tapCount+=1; if(tapTimer) clearTimeout(tapTimer); tapTimer=setTimeout(commitTap, 250);
+  });
+
+  // Start/Reset buttons
+  startBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggleStartPause(); });
+  resetBtn.addEventListener('click', (e)=>{ e.stopPropagation(); state.rep=1; state.swElapsed=0; state.swLastStart = state.running?performance.now():0; persist(); restartCurrentPhase(); showToast('Repetitions reset to 1 • Stopwatch reset'); });
+
+  // Settings inline open/close
+  openSettingsBtn.addEventListener('click', ()=>{ if(state.running) pause(); settingsBlock.hidden=false; populateDigits('work',state.work); populateDigits('rest',state.rest); });
+  settingsClose.addEventListener('click', ()=>{ settingsBlock.hidden=true; });
+
+  // Help
+  $('openHelp').addEventListener('click', ()=>{ $('helpScreen').style.display='block'; });
+  $('backFromHelp').addEventListener('click', ()=>{ $('helpScreen').style.display='none'; });
+
+  // Rep button (+1 tap, long-press reset to 1)
+  let repPressTimer=null, repPressed=false;
+  repBtn.addEventListener('pointerdown', ()=>{
+    repPressed=true;
+    repPressTimer=setTimeout(()=>{ if(repPressed){ state.rep=1; persist(); updateAllUI(); showToast('Repetitions reset to 1'); } }, 500);
+  });
+  repBtn.addEventListener('pointerup', ()=>{
+    if(repPressTimer){ clearTimeout(repPressTimer); repPressTimer=null; }
+    if(repPressed){ state.rep+=1; persist(); updateAllUI(); }
+    repPressed=false;
+  });
+  repBtn.addEventListener('pointerleave', ()=>{ repPressed=false; if(repPressTimer){ clearTimeout(repPressTimer); repPressTimer=null; } });
+
+  // Keyboard: any key toggles start/pause (unless typing)
+  document.addEventListener('keydown', (e)=>{
+    const tag=(e.target&&e.target.tagName)?e.target.tagName.toUpperCase():'';
+    if(tag==='INPUT'||tag==='TEXTAREA'||e.target.isContentEditable) return;
+    if($('helpScreen').style.display==='block') return;
+    toggleStartPause();
+  });
+
+  // Settings Reset: zero times + reset reps + reset stopwatch
+  settingsReset.addEventListener('click', ()=>{
+    pause(); state.work=0; state.rest=0; state.rep=1; state.swElapsed=0; state.swLastStart=0; persist();
+    populateDigits('work',state.work); populateDigits('rest',state.rest); updateHeader(); updateAllUI();
     showToast('Times zeroed • Reps reset • Stopwatch reset');
   });
 
-  // Initial draw (ensure top controls reflect defaults)
-  (function initDraw(){
-    // set initial meta labels (0:20 / 0:10)
-    updateMetaTop();
-    // set initial clock for Work
+  // Initial draw
+  (function init(){
+    updateHeader();
     clockEl.textContent = fmt(state.work);
-    // progress bar base
-    const total = currentTotal();
-    const frac = total>0 ? Math.min(state.elapsed/total, 1) : 0;
-    progressFull.style.height = (Math.max(6, frac*100)).toFixed(2)+'vh';
-    updateStopwatchUI();
-    updateAllUI();
+    const total=currentTotal(), frac = total>0?Math.min(state.elapsed/total,1):0;
+    progressFull.style.height=(Math.max(6,frac*100)).toFixed(2)+'vh';
+    updateStopwatch(); updateAllUI();
   })();
 
-  // (Optional) Keep screen awake on mobile if supported
-  if ('wakeLock' in navigator) {
-    let wl;
-    const req = async ()=>{ try{ wl = await navigator.wakeLock.request('screen'); }catch{} };
-    req();
-    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') req(); });
-  }
+  // Keep screen awake (if supported)
+  if('wakeLock' in navigator){ let wl; const req=async()=>{try{wl=await navigator.wakeLock.request('screen');}catch{}}; req(); document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') req(); }); }
 </script>
 </body>
 </html>
