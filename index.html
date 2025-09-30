@@ -33,9 +33,9 @@
     --rest1: rgba(239,68,68,.95);  /* red */
     --rest2: rgba(239,68,68,.65);
 
-    --fab:#60a5fa;           /* left blue ball */
-    --fab2:#60a5fa;          /* right blue ball */
-    --ok:#34d399;
+    /* FAB colors */
+    --fabBlue:#60a5fa;
+    --fabRed:#ef4444;
   }
 
   *{box-sizing:border-box}
@@ -191,23 +191,27 @@
   /* Hideable controls toggle */
   .controls-hidden .hideable{display:none !important;}
 
-  /* Floating blue balls */
+  /* Floating balls with dynamic color */
   .fab, .fab2{
     position:fixed; width:64px; height:64px; border-radius:50%;
     display:grid; place-items:center; font-weight:900; user-select:none; cursor:pointer;
     box-shadow:0 12px 24px rgba(0,0,0,.35), 0 0 0 3px rgba(255,255,255,.2) inset;
-    z-index:12;
+    z-index:12; color:#001a2d;
+    transition:transform .06s ease, background .12s ease, box-shadow .12s ease;
   }
-  .fab{ bottom:160px; left:18px; background:var(--fab); color:#002244; }
-  .fab2{ bottom:160px; right:18px; background:var(--fab2); color:#002244; }
+  .fab{ bottom:160px; left:18px; }
+  .fab2{ bottom:160px; right:18px; }
   .fab:active, .fab2:active{ transform:scale(.98) }
   .fab .dot, .fab2 .dot{ font-size:26px }
+  .fab.blue, .fab2.blue{ background:var(--fabBlue); }
+  .fab.red,  .fab2.red { background:var(--fabRed); box-shadow:0 12px 24px rgba(239,68,68,.35), 0 0 0 3px rgba(255,255,255,.2) inset; }
+
   @media (orientation:landscape){
     .fab{ bottom:80px; left:24px; }
     .fab2{ bottom:80px; right:24px; }
   }
 
-  /* Footer badge (permanent bottom-right: version) */
+  /* Footer badge (version) */
   .footer{
     position:fixed; bottom:6px; right:8px;
     text-align:right; font-size:12px; opacity:.92;
@@ -298,12 +302,12 @@
             <button id="resetBtn" class="btn btn-xxl" title="Reset repetitions to 1">⏹ Reset Reps</button>
           </div>
           <div class="hint">Tap anywhere: 1× pause/resume • 2× reset current • 3× next phase</div>
-          <div class="hint">Left blue ball: hide/show controls • Right blue ball: show/hide stopwatch</div>
+          <div class="hint">Left ball: hide/show controls • Right ball: show/hide stopwatch</div>
         </div>
       </div>
     </section>
 
-    <!-- SETTINGS SCREEN (always visible controls; left blue ball disabled) -->
+    <!-- SETTINGS SCREEN (always visible controls; left ball disabled) -->
     <section id="settingsScreen" class="screen">
       <div class="settings">
         <h2>Work</h2>
@@ -371,7 +375,7 @@
           <button class="btn" id="settingsReset" title="Zero times + Reset reps + Reset stopwatch">⏹ Reset</button>
           <button class="btn btn-settings-big" id="toggleSettings">⚙️ Settings</button>
         </div>
-        <div class="hint">Reset here: zeros Work/Rest, resets Reps to 1, and resets the Stopwatch.</div>
+        <div class="hint">Reset here: zeros Work/Rest, resets Reps to 1, resets the Stopwatch.</div>
       </div>
     </section>
 
@@ -388,8 +392,8 @@
                 <li>3× = Next phase (Work↔Rest), rep +1 when leaving Rest</li>
               </ul>
             </li>
-            <li>Left blue ball: hide/show controls (disabled in Settings).</li>
-            <li>Right blue ball: show/hide stopwatch.</li>
+            <li>Left ball: hide/show controls (disabled in Settings).</li>
+            <li>Right ball: show/hide stopwatch.</li>
             <li>Main <b>Reset Reps</b>: resets reps to 1 and resets the stopwatch.</li>
             <li>Settings <b>Reset</b>: zeros times, resets reps to 1, resets the stopwatch.</li>
             <li>Defaults: <b>Work 1:00</b>, <b>Rest 0:20</b>.</li>
@@ -400,12 +404,12 @@
     </section>
   </div>
 
-  <!-- Floating blue balls -->
-  <div class="fab" id="fab" title="Hide/show controls (disabled in Settings)"><span class="dot">●</span></div>
-  <div class="fab2" id="fab2" title="Show/hide stopwatch"><span class="dot">●</span></div>
+  <!-- Floating balls (dynamic color) -->
+  <div class="fab blue" id="fab" title="Hide/show controls"><span class="dot">●</span></div>
+  <div class="fab2 blue" id="fab2" title="Show/hide stopwatch"><span class="dot">●</span></div>
 
   <!-- Permanent footer badge (bottom-right) -->
-  <div class="footer" id="footerBadge">v6</div>
+  <div class="footer" id="footerBadge">v7</div>
 
   <!-- Toast -->
   <div id="toast" class="toast">Repetitions reset to 1</div>
@@ -482,7 +486,7 @@
   // ----- Persistence -----
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v32')||'{}');
+      const saved = JSON.parse(localStorage.getItem('tabata_v33')||'{}');
       if(Number.isFinite(saved.work)) state.work = saved.work;
       if(Number.isFinite(saved.rest)) state.rest = saved.rest;
       if(typeof saved.muted==='boolean') state.muted = saved.muted;
@@ -494,7 +498,7 @@
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v32', JSON.stringify({
+    localStorage.setItem('tabata_v33', JSON.stringify({
       work:state.work, rest:state.rest, muted:state.muted, volume:state.volume,
       rep:state.rep, controlsHidden:state.controlsHidden,
       swVisible:state.swVisible, swElapsed:state.swElapsed
@@ -555,7 +559,7 @@
     for(const [k,sec] of Object.entries(map)){
       if(k===which) sec.classList.add('active'); else sec.classList.remove('active');
     }
-    // Settings mode: always show controls; left blue ball disabled
+    // Settings mode: always show controls; left ball disabled but keep color logic consistent
     if(which==='settings'){ state.controlsHidden = false; }
     updateAllUI();
   }
@@ -621,25 +625,38 @@
 
   function updateStopwatchUI(){
     stopwatchTag.classList.toggle('hidden', !state.swVisible);
-    // Show live value; if running, preview includes current run segment
     let sw = state.swElapsed;
     if(state.running && state.swLastStart){
       sw += (performance.now() - state.swLastStart)/1000;
     }
-    stopwatchText.textContent = fmt(sw);
+    $('stopwatchText').textContent = fmt(sw);
+  }
+
+  function updateFabColors(){
+    // Left ball: blue when controls are HIDDEN, red when VISIBLE
+    fab.classList.remove('blue','red');
+    fab.classList.add(state.controlsHidden ? 'blue' : 'red');
+
+    // Right ball: red when stopwatch is HIDDEN, blue when VISIBLE
+    fab2.classList.remove('blue','red');
+    fab2.classList.add(state.swVisible ? 'blue' : 'red');
+
+    // Update titles for clarity
+    fab.title = state.controlsHidden ? 'Show controls' : 'Hide controls';
+    fab2.title = state.swVisible ? 'Hide stopwatch' : 'Show stopwatch';
   }
 
   function updateAllUI(){
-    phaseEl.textContent = state.phase==='work'?'Work':'Rest';
+    $('phase').textContent = state.phase==='work'?'Work':'Rest';
     if(!state.running && state.elapsed>0){
-      clockEl.style.color = 'var(--nums-pause)';
+      $('clock').style.color = 'var(--nums-pause)';
     } else if(state.phase==='rest'){
-      clockEl.style.color = 'var(--nums-rest)';
+      $('clock').style.color = 'var(--nums-rest)';
     } else {
-      clockEl.style.color = 'var(--letters-work)';
+      $('clock').style.color = 'var(--letters-work)';
     }
 
-    clockEl.textContent = fmt(remainingSeconds());
+    $('clock').textContent = fmt(remainingSeconds());
     updateMetaTop();
     updateProgressAndBackground();
     setModeClasses();
@@ -651,6 +668,7 @@
     startBtn.setAttribute('aria-pressed', String(state.running));
 
     updateStopwatchUI();
+    updateFabColors();
   }
 
   // init
@@ -670,7 +688,7 @@
     const mo=+qs('[data-role="mo"] .digit',grid).textContent;
     const st=+qs('[data-role="st"] .digit',grid).textContent;
     const so=+qs('[data-role="so"] .digit',grid).textContent;
-    return partsToSecs(mt,mo,st,so);
+    return (mt*10+mo)*60 + (st*10+so);
   }
   function commitDigits(kind){
     const secs = readDigits(kind);
@@ -688,7 +706,7 @@
         if(Number.isInteger(d) && d>=0 && d<=9){
           const role = box.dataset.role;
           const max=(role==='mt'||role==='st')?5:9;
-          digitEl.textContent = String(clampDigit(role, d));
+          digitEl.textContent = String(Math.min(max, Math.max(0, d)));
           commitDigits(grid.dataset.kind);
         }
       }
@@ -782,9 +800,7 @@
 
   // MAIN Reset button: reset all repetitions to 1 + restart current phase + reset stopwatch
   function doResetReps(){
-    // Reset reps
     state.rep = 1;
-    // Reset stopwatch to 0; continue from 0 if running
     state.swElapsed = 0;
     if(state.running){
       state.swLastStart = performance.now();
@@ -813,17 +829,17 @@
     tapTimer=setTimeout(commitTapActions, 350);
   });
 
-  // Blue balls
-  fab.addEventListener('click', (e)=>{
-    e.stopPropagation();
+  // Balls (with color logic)
+  function toggleControlsHidden(){
     if(settingsScreen.classList.contains('active')) return; // disabled in settings
     state.controlsHidden = !state.controlsHidden;
-    persist();
-    updateAllUI();
-  });
+    persist(); updateAllUI();
+  }
+  fab.addEventListener('click', (e)=>{ e.stopPropagation(); toggleControlsHidden(); });
+
   function toggleStopwatch(){
     state.swVisible = !state.swVisible;
-    persist(); updateStopwatchUI();
+    persist(); updateAllUI();
   }
   fab2.addEventListener('click', (e)=>{ e.stopPropagation(); toggleStopwatch(); });
 
@@ -886,15 +902,11 @@
 
   // Settings Reset: zero times + reset reps to 1 + reset stopwatch
   $('settingsReset').addEventListener('click', ()=>{
-    // Pause timer and zero configured times
     pause();
     state.work = 0; state.rest = 0;
-
-    // Reset reps and stopwatch
     state.rep = 1;
     state.swElapsed = 0;
     state.swLastStart = 0;
-
     persist();
     populateDigits('work', state.work);
     populateDigits('rest', state.rest);
