@@ -26,7 +26,9 @@
     --rest1: rgba(239,68,68,.95);  /* red */
     --rest2: rgba(239,68,68,.65);
 
-    --fab:#60a5fa;           /* floating ball color */
+    --fab:#60a5fa;           /* left blue ball color */
+    --fab2:#60a5fa;          /* right blue ball color */
+    --ok:#34d399;
   }
 
   *{box-sizing:border-box}
@@ -37,6 +39,13 @@
     -webkit-tap-highlight-color:transparent;
     background:var(--bg-work);
     transition:background .18s ease;
+  }
+
+  /* Splash */
+  .splash{
+    position:fixed; top:10px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,.7); color:#fff; padding:8px 12px; border-radius:10px;
+    border:1px solid var(--border); z-index:50; font-size:14px; letter-spacing:.02em;
   }
 
   /* Rising background bar (behind content) */
@@ -55,14 +64,18 @@
     gap:10px; padding:8px 12px 92px;  /* room for footer */
   }
 
-  /* VERY TOP: small grey Work/Rest times */
+  /* VERY TOP: small grey Work/Rest times + Stopwatch */
   .meta-top{
-    display:flex; align-items:center; justify-content:flex-start; gap:10px;
+    display:flex; align-items:center; justify-content:flex-start; gap:10px; flex-wrap:wrap;
     font-size:12px; color:#bbb; opacity:.95; padding:4px 0 2px; min-height:28px;
   }
-  .meta-top .group{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
-  .meta-top .tag{background:var(--muted2); border:1px solid var(--border);
-                 border-radius:999px; padding:5px 9px}
+  .meta-top .tag{
+    background:var(--muted2); border:1px solid var(--border);
+    border-radius:999px; padding:5px 9px; display:flex; align-items:center; gap:6px;
+  }
+  .stopwatch{display:inline-flex; align-items:center; gap:6px;}
+  .stopwatch.hidden{display:none;}
+  .stopwatch .icon{font-size:14px; opacity:.9}
 
   /* TOP-RIGHT: Big REP + info */
   .top-right{
@@ -81,7 +94,7 @@
   }
   .pill:active{transform:translateY(1px)}
 
-  /* Topbar (hideable via blue ball) */
+  /* Topbar (hideable via left blue ball) */
   .topbar.hideable{
     display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap
   }
@@ -108,7 +121,7 @@
   .btn.disabled{opacity:.45; filter:grayscale(.2); cursor:not-allowed}
   .btn.active{ outline:2px solid rgba(255,255,255,.12); }
 
-  /* Special big Settings button (left-hand friendly) */
+  /* Big Settings button (left-hand friendly) */
   .btn-settings-big{
     width:100%; max-width:220px; font-size:20px; padding:14px 16px; border-radius:14px;
     display:block; margin-top:8px;
@@ -174,21 +187,22 @@
   /* Hideable controls toggle */
   .controls-hidden .hideable{display:none !important;}
 
-  /* Floating light-blue ball (FAB) — left & up so it doesn't block numbers */
-  .fab{
-    position:fixed; bottom:160px; left:18px; transform:none;
-    width:64px; height:64px; border-radius:50%;
-    background:var(--fab); color:#002244;
-    display:grid; place-items:center; font-weight:900;
+  /* Floating blue balls */
+  .fab, .fab2{
+    position:fixed; width:64px; height:64px; border-radius:50%;
+    display:grid; place-items:center; font-weight:900; user-select:none; cursor:pointer;
     box-shadow:0 12px 24px rgba(0,0,0,.35), 0 0 0 3px rgba(255,255,255,.2) inset;
-    z-index:12; cursor:pointer; user-select:none;
+    z-index:12;
   }
-  .fab:active{transform:scale(.98)}
-  .fab .dot{font-size:26px}
+  .fab{ bottom:160px; left:18px; background:var(--fab); color:#002244; }
+  .fab2{ bottom:160px; right:18px; background:var(--fab2); color:#002244; }
+  .fab:active, .fab2:active{ transform:scale(.98) }
+  .fab .dot, .fab2 .dot{ font-size:26px }
 
   /* Landscape placement tweak */
   @media (orientation:landscape){
     .fab{ bottom:80px; left:24px; }
+    .fab2{ bottom:80px; right:24px; }
   }
 
   /* Footer */
@@ -229,16 +243,20 @@
 </style>
 </head>
 <body class="mode-work">
+  <!-- Splash (10s) -->
+  <div id="splash" class="splash">Jimmy James - 30.09.2025 - v2</div>
+
   <!-- Rising background bar -->
   <div id="progressFull" class="progress-full"></div>
 
   <div class="app" id="app">
-    <!-- VERY TOP: small grey Work/Rest times -->
+    <!-- VERY TOP: Work/Rest + Stopwatch -->
     <div class="meta-top">
-      <div class="group">
-        <span class="tag">Work <b id="workGoalTop">01:00</b></span>
-        <span class="tag">Rest <b id="restGoalTop">00:20</b></span>
-      </div>
+      <span class="tag">Work <b id="workGoalTop">01:00</b></span>
+      <span class="tag">Rest <b id="restGoalTop">00:20</b></span>
+      <span id="stopwatchTag" class="tag stopwatch">
+        <span class="icon">⏱️</span><b id="stopwatchText">00:00</b>
+      </span>
     </div>
 
     <!-- TOP-RIGHT: Big REP + info -->
@@ -247,7 +265,7 @@
       <button id="openHelp" class="pill" aria-label="Open instructions">ℹ️</button>
     </div>
 
-    <!-- CONTROLS BAR (hideable by blue ball; NOT in settings) -->
+    <!-- CONTROLS BAR (hideable by left blue ball; NOT in settings) -->
     <div class="topbar hideable">
       <div class="left" style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -263,7 +281,7 @@
             <input id="volume" type="range" min="0" max="100" value="70" />
           </label>
         </div>
-        <!-- Big left-hand Settings button -->
+        <!-- Big left-hand Settings button (also exits settings if already there) -->
         <button class="btn btn-settings-big" id="openSettings">⚙️ Settings</button>
       </div>
       <div class="right"></div>
@@ -285,12 +303,12 @@
             <button id="resetBtn" class="btn btn-xxl" title="Reset repetitions to 1">⏹ Reset Reps</button>
           </div>
           <div class="hint">Tap anywhere: 1× pause/resume • 2× reset current • 3× next phase</div>
-          <div class="hint">Tap the blue ball to hide/show controls</div>
+          <div class="hint">Left blue ball: hide/show controls • Right blue ball: show/hide stopwatch</div>
         </div>
       </div>
     </section>
 
-    <!-- SETTINGS SCREEN (always visible controls; blue ball disabled) -->
+    <!-- SETTINGS SCREEN (always visible controls; left blue ball disabled) -->
     <section id="settingsScreen" class="screen">
       <div class="settings">
         <h2>Work</h2>
@@ -355,8 +373,7 @@
 
         <div class="settings-cta">
           <button class="btn" id="backToTimer">↩️ Back</button>
-          <button class="btn" id="settingsReset" title="Tap to zero times • Tap 4× to reset repetitions">⏹ Reset</button>
-          <!-- The same big Settings button is used to exit settings too -->
+          <button class="btn" id="settingsReset" title="Tap to zero times • Tap 4× quickly to reset repetitions">⏹ Reset</button>
           <button class="btn btn-settings-big" id="toggleSettings">⚙️ Settings</button>
         </div>
         <div class="hint">Tip: Press <b>Reset</b> 4× quickly to reset repetitions to 1.</div>
@@ -376,7 +393,8 @@
                 <li>3× = Next phase (Work↔Rest), rep +1 when leaving Rest</li>
               </ul>
             </li>
-            <li><b>Blue ball</b> (left): tap to hide/show controls (disabled while in Settings).</li>
+            <li>Left blue ball: hide/show controls (disabled in Settings).</li>
+            <li>Right blue ball: show/hide stopwatch.</li>
             <li>Open <b>Settings</b> to edit times (per-digit +/– or tap digits to type). Changes auto-save.</li>
             <li>Defaults: <b>Work 1:00</b>, <b>Rest 0:20</b>.</li>
             <li><button class="btn" id="backFromHelp">← Back</button></li>
@@ -386,8 +404,9 @@
     </section>
   </div>
 
-  <!-- Floating light-blue ball to hide/show controls -->
-  <div class="fab" id="fab" title="Hide/show controls"><span class="dot">●</span></div>
+  <!-- Floating blue balls -->
+  <div class="fab" id="fab" title="Hide/show controls (disabled in Settings)"><span class="dot">●</span></div>
+  <div class="fab2" id="fab2" title="Show/hide stopwatch"><span class="dot">●</span></div>
 
   <!-- FOOTER -->
   <div class="footer">Jimmy James - 17.08.2025 - 11:55 - v. 1.08</div>
@@ -401,7 +420,13 @@
   const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
   const clamp = (v,min,max) => Math.min(max, Math.max(min, v));
   const pad = n => String(n).padStart(2,'0');
-  const fmt = secs => pad(Math.floor(secs/60))+':'+pad(secs%60);
+  const fmt = secs => {
+    secs = Math.max(0, Math.round(secs));
+    const h = Math.floor(secs/3600);
+    const m = Math.floor((secs%3600)/60);
+    const s = secs%60;
+    return h>0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+  };
   const showToast = (txt)=>{
     const t=el('toast'); t.textContent=txt; t.classList.add('show');
     setTimeout(()=>t.classList.remove('show'), 1200);
@@ -417,24 +442,33 @@
     rep: 1,
     muted: false,
     volume: 0.7,
-    controlsHidden: false
+    controlsHidden: false,
+
+    // Stopwatch
+    swVisible: true,
+    swElapsed: 0,           // seconds
+    swLastStart: 0          // performance.now when started
   };
 
   // ---------- Persistence ----------
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v28')||'{}');
+      const saved = JSON.parse(localStorage.getItem('tabata_v29')||'{}');
       if(Number.isFinite(saved.work)) state.work = saved.work;
       if(Number.isFinite(saved.rest)) state.rest = saved.rest;
       if(typeof saved.muted==='boolean') state.muted = saved.muted;
       if(Number.isFinite(saved.volume)) state.volume = saved.volume;
       if(typeof saved.rep==='number') state.rep = Math.max(1, Math.floor(saved.rep));
       if(typeof saved.controlsHidden==='boolean') state.controlsHidden = saved.controlsHidden;
+      if(typeof saved.swVisible==='boolean') state.swVisible = saved.swVisible;
+      if(Number.isFinite(saved.swElapsed)) state.swElapsed = saved.swElapsed;
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v28', JSON.stringify({
-      work:state.work, rest:state.rest, muted:state.muted, volume:state.volume, rep:state.rep, controlsHidden:state.controlsHidden
+    localStorage.setItem('tabata_v29', JSON.stringify({
+      work:state.work, rest:state.rest, muted:state.muted, volume:state.volume,
+      rep:state.rep, controlsHidden:state.controlsHidden,
+      swVisible:state.swVisible, swElapsed:state.swElapsed
     }));
   }
 
@@ -444,6 +478,7 @@
   const settingsScreen = el('settingsScreen');
   const helpScreen = el('helpScreen');
 
+  const splash = el('splash');
   const pauseBanner = el('pauseBanner');
   const phaseEl = el('phase');
   const clockEl = el('clock');
@@ -458,10 +493,16 @@
   const volumeInput = el('volume');
   const startBtn = el('startBtn');
   const resetBtn = el('resetBtn');
-  const fab = el('fab');
+  const fab = el('fab');     // left: controls
+  const fab2 = el('fab2');   // right: stopwatch
 
-  const openSettingsBtn = el('openSettings');   // main/topbar big settings
+  const openSettingsBtn = el('openSettings');     // main/topbar big settings
   const toggleSettingsBtn = el('toggleSettings'); // settings page also has a settings button
+  const stopwatchTag = el('stopwatchTag');
+  const stopwatchText = el('stopwatchText');
+
+  // Splash auto-hide after 10s
+  setTimeout(()=>{ if(splash) splash.style.display='none'; }, 10000);
 
   // ---------- Topbar ----------
   soundToggle.checked = !state.muted;
@@ -492,7 +533,7 @@
     for(const [k,sec] of Object.entries(map)){
       if(k===which) sec.classList.add('active'); else sec.classList.remove('active');
     }
-    // Settings mode rule: always show controls, blue ball disabled
+    // Settings mode rule: always show controls, left blue ball disabled
     if(which==='settings'){
       state.controlsHidden = false;
     }
@@ -505,6 +546,7 @@
   }
 
   // ---------- Helpers ----------
+  const clampDigit = (role, val)=> (role==='mt'||role==='st') ? clamp(val,0,5) : clamp(val,0,9);
   function secsToParts(s){ s=Math.max(0,Math.round(s)); return {m:Math.floor(s/60), s:s%60}; }
   function partsToSecs(mt,mo,st,so){ let m=mt*10+mo, sec=st*10+so; m=clamp(m,0,59); sec=clamp(sec,0,59); return m*60+sec; }
 
@@ -558,6 +600,11 @@
     }
   }
 
+  function updateStopwatchUI(){
+    stopwatchTag.classList.toggle('hidden', !state.swVisible);
+    stopwatchText.textContent = fmt(state.swElapsed);
+  }
+
   function updateAllUI(){
     phaseEl.textContent = state.phase==='work'?'Work':'Rest';
     // number colors
@@ -580,6 +627,8 @@
 
     startBtn.classList.toggle('active', state.running);
     startBtn.setAttribute('aria-pressed', String(state.running));
+
+    updateStopwatchUI();
   }
 
   // init
@@ -617,7 +666,7 @@
         if(Number.isInteger(d) && d>=0 && d<=9){
           const role = box.dataset.role;
           const max=(role==='mt'||role==='st')?5:9;
-          digitEl.textContent = String(Math.min(d,max));
+          digitEl.textContent = String(clampDigit(role, d));
           commitDigits(grid.dataset.kind);
         }
       }
@@ -645,14 +694,23 @@
     ensureAudio();
     state.running=true;
     state.startTs = performance.now() - state.elapsed*1000; // continue where left
+    // start stopwatch ticking
+    state.swLastStart = performance.now();
     if(state.elapsed===0){ runPhaseTone(); }
     loop();
     updateAllUI();
   }
   function pause(){
+    if(!state.running) return;
     state.running=false;
     if(rafId) cancelAnimationFrame(rafId);
     rafId=null;
+    // accumulate stopwatch time up to now
+    if(state.swLastStart){
+      state.swElapsed += (performance.now() - state.swLastStart)/1000;
+      state.swLastStart = 0;
+      persist();
+    }
     updateAllUI();
   }
   function toggleStartPause(){ state.running ? pause() : start(); }
@@ -689,7 +747,12 @@
     const total = currentTotal();
     const now = performance.now();
     state.elapsed = Math.max(0, (now - state.startTs)/1000);
-    if(state.elapsed >= total){ switchPhaseAuto(); }
+    // live update stopwatch preview (without committing)
+    if(state.swLastStart){
+      const swNow = state.swElapsed + (now - state.swLastStart)/1000;
+      stopwatchText.textContent = fmt(swNow);
+    }
+    if(state.elapsed >= total){ switchPhaseAuto(); state.startTs = performance.now(); }
     updateAllUI();
     rafId = requestAnimationFrame(loop);
   }
@@ -712,14 +775,14 @@
     else if(c>=3){ nextPhase(); }
   }
   timerScreen.addEventListener('pointerdown', (e)=>{
-    const interactive = e.target.closest('button, input, label, .digit, .ud button, .settings, .chip, .fab');
+    const interactive = e.target.closest('button, input, label, .digit, .ud button, .settings, .chip, .fab, .fab2');
     if(interactive) return;
     tapCount+=1;
     if(tapTimer) clearTimeout(tapTimer);
     tapTimer=setTimeout(commitTapActions, 350);
   });
 
-  // Blue ball toggles controls (disabled in Settings)
+  // Left blue ball toggles controls (disabled in Settings)
   fab.addEventListener('click', (e)=>{
     e.stopPropagation();
     if(settingsScreen.classList.contains('active')) return; // disabled in settings
@@ -727,6 +790,13 @@
     persist();
     updateAllUI();
   });
+
+  // Right blue ball toggles stopwatch visibility (works everywhere)
+  function toggleStopwatch(){
+    state.swVisible = !state.swVisible;
+    persist(); updateStopwatchUI();
+  }
+  fab2.addEventListener('click', (e)=>{ e.stopPropagation(); toggleStopwatch(); });
 
   // ---------- REP button (big, top-right) ----------
   let repPressTimer=null; let repPressed=false;
@@ -825,6 +895,8 @@
     const frac = total>0 ? Math.min(state.elapsed/total, 1) : 0;
     progressFull.style.height = (Math.max(6, frac*100)).toFixed(2)+'vh';
   }
+  // Stopwatch initial UI
+  updateStopwatchUI();
   updateProgressOnInit();
   updateAllUI();
 </script>
