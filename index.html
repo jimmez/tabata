@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Tabata Timer v13</title>
+<title>Tabata Timer v14</title>
 
 <!-- PWA-ish -->
 <meta name="theme-color" content="#000000">
@@ -58,7 +58,7 @@
   .app{
     position:relative; z-index:1; max-width:820px; margin:0 auto;
     min-height:100%; display:flex; flex-direction:column;
-    padding:60px 12px 92px;  /* top padding leaves space for fixed stopwatch; bottom for badge */
+    padding:8px 12px 92px;  /* bottom room for badge */
     gap:0;
   }
 
@@ -72,17 +72,7 @@
     border-radius:999px; padding:6px 10px; display:flex; align-items:center; gap:6px;
   }
   .workrest{display:flex; gap:8px; align-items:center;}
-  .workrest.hidden{visibility:hidden;} /* reserve space, no clock shift */
-
-  /* TOP CENTER: Big Stopwatch (fixed) */
-  .stopwatch-top{
-    position:fixed; top:8px; left:50%; transform:translateX(-50%);
-    z-index:12;
-    font-size:36px; font-weight:1000; letter-spacing:.02em;
-    background:var(--muted2); border:1px solid var(--border);
-    padding:8px 14px; border-radius:999px;
-  }
-  @media (max-width:420px){ .stopwatch-top{font-size:32px} }
+  .workrest.hidden{visibility:hidden;} /* reserve space, no layout shift */
 
   /* TOP-RIGHT: Big REP + help (fixed) */
   .top-right{
@@ -99,21 +89,20 @@
   }
   .pill:active{transform:translateY(1px)}
 
-  /* Clock area stays centered and never moves */
+  /* CENTER STAGE — keeps CLOCK perfectly centered vertically */
   .midwrap{
-    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    flex:1;
+    display:grid;
+    grid-template-rows: 1fr auto auto auto auto 1fr; /* spacer, clock, stopwatch, phase, pause, spacer */
+    align-items:center; justify-items:center;
     text-align:center; padding:0 6px;
   }
-  .clock{font-size:112px; font-weight:900; line-height:1; letter-spacing:.02em; margin:6px 0}
-  .phase{font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin-top:10px}
-  /* v12: Pause banner BELOW the timer (no shifting) */
-  .pause-banner{
-    margin-top:10px;
-    font-size:36px; font-weight:1000; letter-spacing:.12em;
-    text-transform:uppercase; color:var(--nums-pause);
-    text-shadow:0 2px 14px rgba(0,0,0,.25);
-    display:none;
-  }
+  .clock{grid-row:2; font-size:112px; font-weight:900; line-height:1; letter-spacing:.02em; margin:6px 0}
+  .stopwatch-big{grid-row:3; margin-top:10px; font-size:36px; font-weight:1000; letter-spacing:.02em;
+    background:var(--muted2); border:1px solid var(--border); padding:8px 14px; border-radius:999px;}
+  .phase{grid-row:4; font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin-top:10px}
+  .pause-banner{grid-row:5; margin-top:10px; font-size:36px; font-weight:1000; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--nums-pause); text-shadow:0 2px 14px rgba(0,0,0,.25); display:none;}
 
   /* Bottom controls & settings (below the numbers) */
   .bottom{
@@ -169,6 +158,8 @@
     .digit-grid{max-width:330px}
     .settings-cta .btn{min-width:128px}
     .rep-big{font-size:64px}
+    .stopwatch-big{font-size:32px}
+    .pause-banner{font-size:32px}
   }
 
   /* Version badge (bottom-right) */
@@ -218,9 +209,6 @@
   <!-- Rising background bar -->
   <div id="progressFull" class="progress-full"></div>
 
-  <!-- TOP-CENTER STOPWATCH (fixed) -->
-  <div class="stopwatch-top" id="stopwatchText">00:00</div>
-
   <div class="app" id="app">
     <!-- Header: Work/Rest tags (left) -->
     <div class="header">
@@ -236,12 +224,14 @@
       <button id="openHelp" class="pill" aria-label="Open instructions">ℹ️</button>
     </div>
 
-    <!-- CLOCK (stays centered, never moves) -->
+    <!-- CENTER STAGE -->
     <div class="midwrap" id="timerArea">
+      <div style="grid-row:1;"></div><!-- spacer top -->
       <div class="clock" id="clock">00:20</div>
+      <div class="stopwatch-big" id="stopwatchText">00:00</div>
       <div class="phase" id="phase">Work</div>
-      <!-- Pause banner BELOW the timer -->
       <div class="pause-banner" id="pauseBanner">PAUSE</div>
+      <div style="grid-row:6;"></div><!-- spacer bottom -->
     </div>
 
     <!-- BOTTOM: actions + settings (below the numbers) -->
@@ -330,7 +320,7 @@
           </div>
         </div>
 
-        <!-- Sound options -->
+        <!-- Sounds -->
         <h2>Sounds</h2>
         <div class="block">
           <div class="dlabel" style="margin-bottom:8px">
@@ -362,7 +352,7 @@
         <div class="help">
           <h3>How it works</h3>
           <ul>
-            <li><b>Tap anywhere</b> on the main timer to Start / Pause / Resume.</li>
+            <li><b>Tap anywhere</b> on the main screen to Start / Pause / Resume.</li>
             <li>Controls live <b>below</b> the numbers so the countdown never shifts.</li>
             <li><b>Playing</b> hides Settings/Sound/Volume and Start/Reset; <b>Pause</b> shows them.</li>
             <li>Reset Reps: resets reps to 1, resets stopwatch, and switches to <b>Work</b>.</li>
@@ -374,10 +364,10 @@
     </section>
   </div>
 
-  <!-- Version badge (persistent) -->
-  <div class="footer" id="footerBadge">v13 • 02.10.2025</div>
+  <!-- Version badge -->
+  <div class="footer" id="footerBadge">v14 • 02.10.2025</div>
 
-  <!-- Transient bottom note -->
+  <!-- Transient bottom note (5s) -->
   <div class="transient" id="jjTransient">jimmy james – 02.10.2025</div>
 
   <!-- Toast -->
@@ -438,7 +428,7 @@
   // ---- Persistence ----
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v39')||'{}');
+      const saved = JSON.parse(localStorage.getItem('tabata_v40')||'{}');
       for(const k of ['work','rest','rep','muted','volume','swElapsed','soundTheme']){
         if(saved[k]!==undefined){
           if(k==='muted') state[k]=!!saved[k];
@@ -449,7 +439,7 @@
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v39', JSON.stringify({
+    localStorage.setItem('tabata_v40', JSON.stringify({
       work:state.work, rest:state.rest, rep:state.rep,
       muted:state.muted, volume:state.volume, swElapsed:state.swElapsed,
       soundTheme:state.soundTheme
@@ -776,13 +766,17 @@
     rafId=requestAnimationFrame(loop);
   }
 
-  // Interactions
-  // Tap anywhere on the timer to Start/Pause/Resume
+  // ---- Main interactions ----
+  // Tap ANYWHERE on the page to Start/Pause/Resume (except UI controls)
   let tapCount=0, tapTimer=null;
   function commitTap(){ const c=tapCount; tapCount=0; clearTimeout(tapTimer); tapTimer=null; if(c===1) toggleStartPause(); }
-  $('timerArea').addEventListener('pointerdown', (e)=>{
-    if(e.target.closest('button, input, label, .digit, .ud button, .settings')) return;
-    tapCount+=1; if(tapTimer) clearTimeout(tapTimer); tapTimer=setTimeout(commitTap, 250);
+  function okForGlobalToggle(target){
+    // ignore taps on interactive UI bits
+    return !target.closest('button, input, select, label, .digit, .ud button, .settings, .help, .chip');
+  }
+  document.body.addEventListener('pointerdown', (e)=>{
+    if(!okForGlobalToggle(e.target)) return;
+    tapCount+=1; if(tapTimer) clearTimeout(tapTimer); tapTimer=setTimeout(commitTap, 240);
   });
 
   // Buttons
