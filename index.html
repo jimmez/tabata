@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Tabata Timer v11</title>
+<title>Tabata Timer v12</title>
 
 <!-- PWA-ish -->
 <meta name="theme-color" content="#000000">
@@ -71,8 +71,6 @@
     background:var(--muted2); border:1px solid var(--border);
     border-radius:999px; padding:6px 10px; display:flex; align-items:center; gap:6px;
   }
-  .tag .icon{font-size:16px}
-  .tag b{font-size:16px; font-weight:1000; letter-spacing:.02em;}
   .workrest{display:flex; gap:8px; align-items:center;}
   .workrest.hidden{visibility:hidden;} /* reserve space, no layout shift */
 
@@ -96,16 +94,25 @@
     flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
     text-align:center; padding:0 6px;
   }
+  .clock{font-size:112px; font-weight:900; line-height:1; letter-spacing:.02em; margin:6px 0}
+  .stopwatch-big{
+    margin-top:10px;
+    font-size:36px;                 /* doubled from earlier ~18px */
+    font-weight:1000; letter-spacing:.02em;
+    background:var(--muted2); border:1px solid var(--border);
+    padding:8px 14px; border-radius:999px;
+  }
+  .phase{font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin-top:10px}
+  /* v12: Pause banner BELOW the timer (no shifting) */
   .pause-banner{
-    display:none; font-size:48px; font-weight:1000; letter-spacing:.12em;
+    margin-top:10px;
+    font-size:36px; font-weight:1000; letter-spacing:.12em;
     text-transform:uppercase; color:var(--nums-pause);
     text-shadow:0 2px 14px rgba(0,0,0,.25);
-    margin-bottom:6px;
+    display:none;
   }
-  .clock{font-size:112px; font-weight:900; line-height:1; letter-spacing:.02em; margin:6px 0}
-  .phase{font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin-top:6px}
 
-  /* Bottom controls & settings (live below so clock never shifts) */
+  /* Bottom controls & settings (below the numbers) */
   .bottom{
     display:flex; flex-direction:column; gap:12px; align-items:center; margin:10px 0 0;
   }
@@ -131,7 +138,7 @@
   .btn-xxl{font-size:22px; padding:14px 18px; border-radius:16px; min-width:150px}
   .btn.disabled{opacity:.45; filter:grayscale(.2); cursor:not-allowed}
 
-  .settings{background:var(--muted2); border:1px solid var(--border); border-radius:14px; padding:10px 12px; width:100%; max-width:860px}
+  .settings{background:var(--muted2); border:1px solid var(--border); border-radius:14px; padding:10px 12px; width:100%; max-width:860px; max-height:48vh; overflow:auto;}
   h2{margin:4px 0 8px; font-size:16px; text-transform:uppercase; letter-spacing:.07em}
   .block{background:var(--muted); border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:8px}
   .digit-grid{display:grid; grid-template-columns:repeat(4, minmax(44px,1fr)); gap:8px; max-width:360px; margin:0 auto}
@@ -159,6 +166,8 @@
     .digit-grid{max-width:330px}
     .settings-cta .btn{min-width:128px}
     .rep-big{font-size:64px}
+    .stopwatch-big{font-size:32px}
+    .pause-banner{font-size:32px}
   }
 
   /* Footer badge (version) */
@@ -205,7 +214,6 @@
         <span class="tag">Work <b id="workGoalTop">00:20</b></span>
         <span class="tag">Rest <b id="restGoalTop">00:10</b></span>
       </span>
-      <span class="tag"><span class="icon">⏱️</span><b id="stopwatchText">00:00</b></span>
     </div>
 
     <!-- TOP-RIGHT: Big REP + info -->
@@ -216,9 +224,12 @@
 
     <!-- CLOCK (stays centered, never moves) -->
     <div class="midwrap" id="timerArea">
-      <div class="pause-banner" id="pauseBanner">PAUSE</div>
       <div class="clock" id="clock">00:20</div>
+      <!-- v12: Big stopwatch in the middle -->
+      <div class="stopwatch-big" id="stopwatchText">00:00</div>
       <div class="phase" id="phase">Work</div>
+      <!-- v12: Pause banner BELOW the timer -->
+      <div class="pause-banner" id="pauseBanner">PAUSE</div>
     </div>
 
     <!-- BOTTOM: actions + settings (below the numbers) -->
@@ -226,7 +237,7 @@
       <!-- Actions -->
       <div class="row" id="actionRow">
         <button id="startBtn" class="btn btn-xxl" aria-pressed="false">▶️ Start / Pause</button>
-        <button id="resetBtn" class="btn btn-xxl" title="Reset repetitions to 1">⏹ Reset Reps</button>
+        <button id="resetBtn" class="btn btn-xxl" title="Reset repetitions to 1 • Go to Work">⏹ Reset Reps</button>
         <button class="btn btn-xxl" id="openSettings">⚙️ Settings</button>
       </div>
 
@@ -307,11 +318,29 @@
           </div>
         </div>
 
+        <!-- v12: Sound options -->
+        <h2>Sounds</h2>
+        <div class="block">
+          <div class="dlabel" style="margin-bottom:8px">
+            Choose a style. Default keeps: <b>Work = 1 beep</b>, <b>Rest = 2 beeps</b> (two pitches).
+          </div>
+          <label class="chip" style="gap:12px;">
+            <span>Theme</span>
+            <select id="soundTheme">
+              <option value="beep">Beep (default)</option>
+              <option value="doorbell">Doorbell (two tones)</option>
+              <option value="flute">Flute-like</option>
+              <option value="chime">Chime</option>
+              <option value="click">Click</option>
+            </select>
+          </label>
+        </div>
+
         <div class="settings-cta">
           <button class="btn" id="settingsClose">↩️ Back</button>
           <button class="btn" id="settingsReset" title="Zero times + Reset reps + Reset stopwatch">⏹ Reset</button>
         </div>
-        <div class="dlabel" style="text-align:center; margin-top:6px;">Changes auto-save.</div>
+        <div class="dlabel" style="text-align:center; margin-top:6px;">Changes auto-save. Scroll for more.</div>
       </div>
     </div>
 
@@ -324,7 +353,7 @@
             <li><b>Tap anywhere</b> on the main timer to Start / Pause / Resume.</li>
             <li>Controls live <b>below</b> the numbers so the countdown never shifts.</li>
             <li><b>Playing</b> hides Settings/Sound/Volume and Start/Reset; <b>Pause</b> shows them.</li>
-            <li>Reset Reps: resets reps to 1 and resets the stopwatch.</li>
+            <li>Reset Reps: resets reps to 1, resets stopwatch, and switches to <b>Work</b>.</li>
             <li>Settings Reset: zeros times, resets reps to 1, resets the stopwatch.</li>
             <li>Defaults: <b>Work 0:20</b>, <b>Rest 0:10</b>.</li>
             <li><button class="btn" id="backFromHelp">← Back</button></li>
@@ -335,7 +364,7 @@
   </div>
 
   <!-- Version badge -->
-  <div class="footer" id="footerBadge">v11</div>
+  <div class="footer" id="footerBadge">v12 • 01.10.2025</div>
 
   <!-- Toast -->
   <div id="toast" class="toast">Repetitions reset to 1</div>
@@ -380,7 +409,7 @@
     startTs:0, elapsed:0,
     rep:1,
     muted:false, volume:0.7,
-
+    soundTheme:'beep',          // v12
     // Stopwatch
     swElapsed:0, swLastStart:0
   };
@@ -388,20 +417,21 @@
   // ---- Persistence ----
   (function load(){
     try{
-      const saved = JSON.parse(localStorage.getItem('tabata_v37')||'{}');
-      for(const k of ['work','rest','rep','muted','volume','swElapsed']){
+      const saved = JSON.parse(localStorage.getItem('tabata_v38')||'{}');
+      for(const k of ['work','rest','rep','muted','volume','swElapsed','soundTheme']){
         if(saved[k]!==undefined){
           if(k==='muted') state[k]=!!saved[k];
           else if(k==='volume') state[k]=+saved[k];
-          else state[k]=+saved[k];
+          else state[k]= (k==='soundTheme') ? String(saved[k]) : +saved[k];
         }
       }
     }catch{}
   })();
   function persist(){
-    localStorage.setItem('tabata_v37', JSON.stringify({
+    localStorage.setItem('tabata_v38', JSON.stringify({
       work:state.work, rest:state.rest, rep:state.rep,
-      muted:state.muted, volume:state.volume, swElapsed:state.swElapsed
+      muted:state.muted, volume:state.volume, swElapsed:state.swElapsed,
+      soundTheme:state.soundTheme
     }));
   }
 
@@ -428,12 +458,15 @@
   const volumeInput = $('volume');
   const soundChip = $('soundChip');
   const volChip = $('volChip');
+  const soundThemeSel = $('soundTheme');
 
   // ---- Audio toggles ----
   soundToggle.checked = !state.muted;
   volumeInput.value = Math.round(state.volume*100);
+  soundThemeSel.value = state.soundTheme;
   soundToggle.addEventListener('change', ()=>{ state.muted = !soundToggle.checked; persist(); });
   volumeInput.addEventListener('input', ()=>{ state.volume = clamp(+volumeInput.value/100,0,1); persist(); });
+  soundThemeSel.addEventListener('change', ()=>{ state.soundTheme = soundThemeSel.value; persist(); });
 
   // ---- UI helpers ----
   function secsToParts(s){ s=Math.max(0,Math.round(s)); return {m:Math.floor(s/60), s:s%60}; }
@@ -479,13 +512,9 @@
     const playing = state.running;
     // Header Work/Rest: hide (via visibility) while playing; visible when paused
     workRestHeader.classList.toggle('hidden', playing);
-
     // Bottom controls: hide while playing, show when paused
-    const actionRow = $('actionRow');
-    const audioRow  = $('audioRow');
-    actionRow.style.display = playing ? 'none' : '';
-    audioRow.style.display   = playing ? 'none' : '';
-
+    $('actionRow').style.display = playing ? 'none' : '';
+    $('audioRow').style.display  = playing ? 'none' : '';
     // If we start playing while settings open, close them
     if(playing && !settingsBlock.hidden){ settingsBlock.hidden=true; }
   }
@@ -561,7 +590,20 @@
     if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
     if(audioCtx.state==='suspended'){ audioCtx.resume(); }
   }
-  function beep(freq=440, dur=0.3, t0){
+
+  // Build a short noise click buffer (for "click" theme)
+  let noiseBuffer=null;
+  function getNoiseBuffer(ctx){
+    if(noiseBuffer) return noiseBuffer;
+    const len = 0.02*ctx.sampleRate; // 20 ms
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for(let i=0;i<len;i++){ data[i] = (Math.random()*2-1) * Math.exp(-i/(len*0.6)); }
+    noiseBuffer = buf; return buf;
+  }
+
+  // Low-level tone helpers
+  function oscBeep(freq=440, dur=0.3, type='sine', gainScale=1, t0){
     if(state.muted) return 0;
     if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
     const ctx=audioCtx;
@@ -569,23 +611,122 @@
     const now = t0 ?? ctx.currentTime;
     const osc=ctx.createOscillator();
     const gain=ctx.createGain();
-    osc.type='sine'; osc.frequency.value=freq;
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(state.volume*0.75, now+0.015);
+    osc.type=type;
+    osc.frequency.setValueAtTime(freq, now);
+    // simple ADSR-ish
+    const peak = state.volume * 0.8 * gainScale;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), now+0.02);
     gain.gain.exponentialRampToValueAtTime(0.0001, now+dur);
     osc.connect(gain).connect(ctx.destination);
-    osc.start(now); osc.stop(now+dur+0.02);
+    osc.start(now);
+    osc.stop(now+dur+0.02);
     return dur;
   }
-  function workTone(){ const base=440*HALF_OCT; beep(base,0.5); }
-  function restTone(){
-    const start = audioCtx ? audioCtx.currentTime : 0;
-    const hi = 784*HALF_OCT;  // ~1108 Hz
-    const lo = 523*HALF_OCT;  // ~739 Hz
-    const d1 = beep(hi,0.3,start||undefined);
-    beep(lo,0.3,(start||0)+d1+0.06);
+
+  function chime(freq=880, dur=0.5, t0){
+    if(state.muted) return 0;
+    const ctx=audioCtx||(audioCtx=new (window.AudioContext||window.webkitAudioContext)());
+    const now=t0??ctx.currentTime;
+    const o1=ctx.createOscillator(), o2=ctx.createOscillator();
+    const g=ctx.createGain();
+    o1.type='sine'; o2.type='sine';
+    o1.frequency.setValueAtTime(freq, now);
+    o2.frequency.setValueAtTime(freq*1.5, now); // perfect fifth
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(state.volume*0.6, now+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+    o1.connect(g); o2.connect(g); g.connect(ctx.destination);
+    o1.start(now); o2.start(now);
+    o1.stop(now+dur+0.02); o2.stop(now+dur+0.02);
+    return dur;
   }
-  function runPhaseTone(){ if(state.muted) return; (state.phase==='work')?workTone():restTone(); }
+
+  function fluteLike(freq=660, dur=0.5, t0){
+    if(state.muted) return 0;
+    const ctx=audioCtx||(audioCtx=new (window.AudioContext||window.webkitAudioContext)());
+    const now=t0??ctx.currentTime;
+    const osc=ctx.createOscillator(), vibr=ctx.createOscillator();
+    const g=ctx.createGain(), vg=ctx.createGain();
+    osc.type='triangle';
+    vibr.type='sine';
+    osc.frequency.setValueAtTime(freq, now);
+    vibr.frequency.setValueAtTime(6, now);  // slight vibrato
+    vg.gain.setValueAtTime(5, now);         // +/- 5 Hz
+    vibr.connect(vg).connect(osc.frequency);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(state.volume*0.6, now+0.08);
+    g.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(now); vibr.start(now);
+    osc.stop(now+dur+0.02); vibr.stop(now+dur+0.02);
+    return dur;
+  }
+
+  function clickSound(t0){
+    if(state.muted) return 0;
+    const ctx=audioCtx||(audioCtx=new (window.AudioContext||window.webkitAudioContext)());
+    const now=t0??ctx.currentTime;
+    const src=ctx.createBufferSource(); src.buffer=getNoiseBuffer(ctx);
+    const g=ctx.createGain(); g.gain.value=state.volume;
+    src.connect(g).connect(ctx.destination);
+    src.start(now); src.stop(now+0.02);
+    return 0.02;
+  }
+
+  // Theme-aware cues (Work=1 cue, Rest=2 cues @ two pitches)
+  function cueWork(){
+    ensureAudio();
+    const theme = state.soundTheme;
+    if(theme==='flute') { fluteLike(660*HALF_OCT, 0.5); return; }
+    if(theme==='chime') { chime(880*HALF_OCT, 0.5); return; }
+    if(theme==='click') { clickSound(); return; }
+    if(theme==='doorbell'){ // still one tone for Work
+      oscBeep(880*HALF_OCT, 0.45, 'sine', 1.0);
+      return;
+    }
+    // default beep
+    oscBeep(440*HALF_OCT, 0.5, 'sine', 1.0);
+  }
+
+  function cueRest(){
+    ensureAudio();
+    const theme = state.soundTheme;
+    const ctx = audioCtx;
+
+    if(theme==='flute'){
+      const start = ctx.currentTime;
+      const d1 = fluteLike(784*HALF_OCT, 0.3, start);
+      fluteLike(523*HALF_OCT, 0.3, start + d1 + 0.06);
+      return;
+    }
+    if(theme==='chime'){
+      const start = ctx.currentTime;
+      const d1 = chime(660*HALF_OCT, 0.28, start);
+      chime(440*HALF_OCT, 0.28, start + d1 + 0.06);
+      return;
+    }
+    if(theme==='click'){
+      const start = ctx.currentTime;
+      const d1 = clickSound(start);
+      clickSound(start + d1 + 0.06);
+      return;
+    }
+    if(theme==='doorbell'){
+      const start = ctx.currentTime;
+      const hi = 784 * HALF_OCT;
+      const lo = 523 * HALF_OCT;
+      const d1 = oscBeep(hi, 0.3, 'sine', 1.0, start);
+      oscBeep(lo, 0.3, 'sine', 1.0, start + d1 + 0.06);
+      return;
+    }
+    // default beep theme uses two beeps different pitches
+    const start = ctx.currentTime;
+    const d1 = oscBeep(784*HALF_OCT, 0.3, 'sine', 1.0, start);
+    oscBeep(523*HALF_OCT, 0.3, 'sine', 1.0, start + d1 + 0.06);
+  }
+
+  function runPhaseTone(){ if(state.muted) return; (state.phase==='work') ? cueWork() : cueRest(); }
 
   function start(){
     if(!(state.work>0 || state.rest>0)) return;
@@ -651,7 +792,17 @@
 
   // Start/Reset buttons
   startBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggleStartPause(); });
-  resetBtn.addEventListener('click', (e)=>{ e.stopPropagation(); state.rep=1; state.swElapsed=0; state.swLastStart = state.running?performance.now():0; persist(); restartCurrentPhase(); showToast('Repetitions reset to 1 • Stopwatch reset'); });
+  resetBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    state.rep=1;
+    state.swElapsed=0;
+    state.swLastStart = state.running?performance.now():0;
+    // v12: Always go to Work ("go")
+    state.phase='work';
+    persist();
+    restartCurrentPhase();
+    showToast('Reps reset • Stopwatch reset • Switched to Work');
+  });
 
   // Settings inline open/close
   openSettingsBtn.addEventListener('click', ()=>{ if(state.running) pause(); settingsBlock.hidden=false; populateDigits('work',state.work); populateDigits('rest',state.rest); });
@@ -682,11 +833,11 @@
     toggleStartPause();
   });
 
-  // Settings Reset: zero times + reset reps + reset stopwatch
+  // Settings Reset: zero times + reset reps + reset stopwatch (stays on Work)
   settingsReset.addEventListener('click', ()=>{
-    pause(); state.work=0; state.rest=0; state.rep=1; state.swElapsed=0; state.swLastStart=0; persist();
+    pause(); state.work=0; state.rest=0; state.rep=1; state.swElapsed=0; state.swLastStart=0; state.phase='work'; persist();
     populateDigits('work',state.work); populateDigits('rest',state.rest); updateHeader(); updateAllUI();
-    showToast('Times zeroed • Reps reset • Stopwatch reset');
+    showToast('Times zeroed • Reps reset • Stopwatch reset • Set to Work');
   });
 
   // Initial draw
