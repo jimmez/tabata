@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Tabata Timer v12</title>
+<title>Tabata Timer v15</title>
 
 <!-- PWA-ish -->
 <meta name="theme-color" content="#000000">
@@ -55,10 +55,21 @@
     transition:background .12s ease, box-shadow .12s ease, height .15s linear;
   }
 
+  /* TOP-CENTER STOPWATCH (fixed) */
+  .stopwatch-top{
+    position:fixed; top:8px; left:50%; transform:translateX(-50%);
+    z-index:12;
+    font-size:36px; font-weight:1000; letter-spacing:.02em;
+    background:var(--muted2); border:1px solid var(--border);
+    padding:8px 14px; border-radius:999px;
+  }
+  @media (max-width:420px){ .stopwatch-top{font-size:32px} }
+
   .app{
     position:relative; z-index:1; max-width:820px; margin:0 auto;
     min-height:100%; display:flex; flex-direction:column;
-    padding:8px 12px 92px;  /* room for footer badge */
+    /* add top padding so fixed stopwatch never overlaps the timer */
+    padding:60px 12px 92px;
     gap:0;
   }
 
@@ -95,15 +106,9 @@
     text-align:center; padding:0 6px;
   }
   .clock{font-size:112px; font-weight:900; line-height:1; letter-spacing:.02em; margin:6px 0}
-  .stopwatch-big{
-    margin-top:10px;
-    font-size:36px;                 /* doubled from earlier ~18px */
-    font-weight:1000; letter-spacing:.02em;
-    background:var(--muted2); border:1px solid var(--border);
-    padding:8px 14px; border-radius:999px;
-  }
+  /* (stopwatch moved to top; remove the middle one) */
   .phase{font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin-top:10px}
-  /* v12: Pause banner BELOW the timer (no shifting) */
+  /* Pause banner BELOW the timer (no shifting) */
   .pause-banner{
     margin-top:10px;
     font-size:36px; font-weight:1000; letter-spacing:.12em;
@@ -166,7 +171,6 @@
     .digit-grid{max-width:330px}
     .settings-cta .btn{min-width:128px}
     .rep-big{font-size:64px}
-    .stopwatch-big{font-size:32px}
     .pause-banner{font-size:32px}
   }
 
@@ -207,6 +211,9 @@
   <!-- Rising background bar -->
   <div id="progressFull" class="progress-full"></div>
 
+  <!-- TOP-CENTER STOPWATCH (fixed) -->
+  <div class="stopwatch-top" id="stopwatchText">00:00</div>
+
   <div class="app" id="app">
     <!-- Fixed-height header (reserves space; no clock shift) -->
     <div class="header">
@@ -225,10 +232,8 @@
     <!-- CLOCK (stays centered, never moves) -->
     <div class="midwrap" id="timerArea">
       <div class="clock" id="clock">00:20</div>
-      <!-- v12: Big stopwatch in the middle -->
-      <div class="stopwatch-big" id="stopwatchText">00:00</div>
       <div class="phase" id="phase">Work</div>
-      <!-- v12: Pause banner BELOW the timer -->
+      <!-- Pause banner BELOW the timer -->
       <div class="pause-banner" id="pauseBanner">PAUSE</div>
     </div>
 
@@ -318,7 +323,7 @@
           </div>
         </div>
 
-        <!-- v12: Sound options -->
+        <!-- Sounds -->
         <h2>Sounds</h2>
         <div class="block">
           <div class="dlabel" style="margin-bottom:8px">
@@ -364,7 +369,7 @@
   </div>
 
   <!-- Version badge -->
-  <div class="footer" id="footerBadge">v12 • 01.10.2025</div>
+  <div class="footer" id="footerBadge">v15 • 02.10.2025</div>
 
   <!-- Toast -->
   <div id="toast" class="toast">Repetitions reset to 1</div>
@@ -515,7 +520,7 @@
     // Bottom controls: hide while playing, show when paused
     $('actionRow').style.display = playing ? 'none' : '';
     $('audioRow').style.display  = playing ? 'none' : '';
-    // If we start playing while settings open, close them
+    // Close settings if we start playing
     if(playing && !settingsBlock.hidden){ settingsBlock.hidden=true; }
   }
   function updateAllUI(){
@@ -611,7 +616,7 @@
     const now = t0 ?? ctx.currentTime;
     const osc=ctx.createOscillator();
     const gain=ctx.createGain();
-    osc.type=type;
+    osc.type='sine';
     osc.frequency.setValueAtTime(freq, now);
     // simple ADSR-ish
     const peak = state.volume * 0.8 * gainScale;
@@ -797,7 +802,7 @@
     state.rep=1;
     state.swElapsed=0;
     state.swLastStart = state.running?performance.now():0;
-    // v12: Always go to Work ("go")
+    // Always go to Work ("go")
     state.phase='work';
     persist();
     restartCurrentPhase();
