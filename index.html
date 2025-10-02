@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Tabata Timer v17</title>
+<title>Tabata Timer v18</title>
 
 <!-- PWA-ish -->
 <meta name="theme-color" content="#000000">
@@ -55,22 +55,31 @@
     transition:background .12s ease, box-shadow .12s ease, height .15s linear;
   }
 
-  /* TOP-CENTER STOPWATCH (fixed) — 10% smaller */
-  .stopwatch-top{
-    position:fixed; top:8px; left:50%; transform:translateX(-50%);
-    z-index:12;
-    font-size:32px; /* was 36px */
+  /* TOP-LEFT live device clock — same size as stopwatch */
+  .live-clock{
+    position:fixed; top:8px; left:8px; z-index:12;
+    font-size:32px; /* matches stopwatch-top */
     font-weight:1000; letter-spacing:.02em;
     background:var(--muted2); border:1px solid var(--border);
     padding:8px 14px; border-radius:999px;
-    /* color synced in JS */
+  }
+  @media (max-width:420px){ .live-clock{font-size:29px} }
+
+  /* TOP-CENTER STOPWATCH (fixed) — 10% smaller than original v12 */
+  .stopwatch-top{
+    position:fixed; top:8px; left:50%; transform:translateX(-50%);
+    z-index:12;
+    font-size:32px;
+    font-weight:1000; letter-spacing:.02em;
+    background:var(--muted2); border:1px solid var(--border);
+    padding:8px 14px; border-radius:999px;
   }
   @media (max-width:420px){ .stopwatch-top{font-size:29px} }
 
   .app{
     position:relative; z-index:1; max-width:820px; margin:0 auto;
     min-height:100%; display:flex; flex-direction:column;
-    padding:60px 12px 92px; /* top padding so fixed stopwatch never overlaps timer */
+    padding:60px 12px 92px; /* keep clear of fixed top chips */
     gap:0;
   }
 
@@ -113,7 +122,6 @@
   .clockRow{
     display:flex; align-items:center; gap:14px;
   }
-
   .clock{font-size:112px; font-weight:900; line-height:1; letter-spacing:.02em; margin:6px 0}
 
   /* Pause-only nav buttons beside the clock */
@@ -121,14 +129,12 @@
     display:none; /* shown in pause via JS */
     border:1px solid var(--border);
     background:var(--muted2);
-    color:inherit; /* matches countdown color via JS on body mode */
+    color:inherit;
     font-weight:900; font-size:18px;
     padding:10px 12px; border-radius:12px; cursor:pointer;
     user-select:none;
   }
   .nav-btn:active{transform:translateY(1px)}
-
-  /* Soft tinted backgrounds per mode */
   body.mode-work .nav-btn { background: rgba(96,165,250,0.16); }  /* light blue */
   body.mode-rest .nav-btn { background: rgba(250,204,21,0.16); }  /* yellow */
   body.mode-pause .nav-btn{ background: rgba(168,85,247,0.16); }  /* purple */
@@ -246,6 +252,9 @@
 <body class="mode-work">
   <!-- Rising background bar -->
   <div id="progressFull" class="progress-full"></div>
+
+  <!-- TOP-LEFT LIVE CLOCK -->
+  <div class="live-clock" id="liveClock">00:00</div>
 
   <!-- TOP-CENTER STOPWATCH -->
   <div class="stopwatch-top" id="stopwatchText">00:00</div>
@@ -408,7 +417,7 @@
   </div>
 
   <!-- Version badge -->
-  <div class="footer" id="footerBadge">v17</div>
+  <div class="footer" id="footerBadge">v18</div>
 
   <!-- Transient bottom note (5s) -->
   <div class="transient" id="jjTransient">Jimmy James – 02.10.2025</div>
@@ -447,6 +456,14 @@
     return h>0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`; };
   const toast=$('toast');
   const showToast = t => { toast.textContent=t; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),1200); };
+
+  // ---- Live 24h device clock (HH:MM) ----
+  function fmtHHMM(d){ return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+  function tickLiveClock(){
+    $('liveClock').textContent = fmtHHMM(new Date());
+  }
+  setInterval(tickLiveClock, 1000); // keep it fresh each minute/second
+  tickLiveClock();
 
   // ---- Transient credit 5s ----
   (function showJJ(){
@@ -495,6 +512,7 @@
   const workGoalTopEl = $('workGoalTop');
   const restGoalTopEl = $('restGoalTop');
   const stopwatchText = $('stopwatchText');
+  const liveClock = $('liveClock');
 
   const pauseBanner = $('pauseBanner');
   const clockEl = $('clock');
@@ -547,10 +565,11 @@
   }
 
   function syncColors(){
-    // Make stopwatch and rep number match the main countdown color
+    // Make stopwatch, rep number, and live clock match the main countdown color
     const col = getComputedStyle(clockEl).color;
     stopwatchText.style.color = col;
     repBtn.style.color = col;
+    liveClock.style.color = col;
   }
 
   function updateProgress(){
@@ -781,7 +800,6 @@
   function toggleStartPause(){ state.running?pause():start(); }
 
   function restartCurrentPhasePaused(){
-    // Keep paused; reset elapsed to 0
     state.running=false;
     state.elapsed=0;
     state.startTs=performance.now();
@@ -789,7 +807,6 @@
   }
 
   function switchPhaseToPaused(newPhase, opts={}){
-    // newPhase: 'work' | 'rest', keep paused; adjust rep if needed
     if(newPhase==='work' && state.phase==='rest' && opts.incRep){
       state.rep += 1;
     }
@@ -812,7 +829,7 @@
     const now=performance.now();
     state.elapsed = Math.max(0,(now-state.startTs)/1000);
 
-    updateStopwatch(); // live
+    updateStopwatch();
     if(state.elapsed>=total){ nextPhaseAuto(); state.startTs=performance.now(); }
     updateAllUI();
     rafId=requestAnimationFrame(loop);
@@ -882,15 +899,11 @@
     if(state.running) return; // only in pause
 
     if(state.phase==='work'){
-      // Pause + Work: back → start of current Work
       restartCurrentPhasePaused();
     } else {
-      // Pause + Rest
       if(state.elapsed>0){
-        // Not at start → go to start of this Rest (rep unchanged)
         restartCurrentPhasePaused();
       } else {
-        // Already at start of Rest → go to start of preceding Work (same rep)
         switchPhaseToPaused('work', {incRep:false});
       }
     }
@@ -901,16 +914,15 @@
     if(state.running) return; // only in pause
 
     if(state.phase==='work'){
-      // Pause + Work: forward → start of Rest (rep unchanged)
       switchPhaseToPaused('rest', {incRep:false});
     } else {
-      // Pause + Rest: forward → start of next Work (rep +1)
       switchPhaseToPaused('work', {incRep:true});
     }
   });
 
   // ---- Initial draw ----
   (function init(){
+    tickLiveClock();
     updateHeader();
     clockEl.textContent = fmt(state.work);
     const total=currentTotal(), frac = total>0?Math.min(state.elapsed/total,1):0;
