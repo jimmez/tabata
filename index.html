@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Tabata Timer v16</title>
+<title>Tabata Timer v17</title>
 
 <!-- PWA-ish -->
 <meta name="theme-color" content="#000000">
@@ -63,7 +63,7 @@
     font-weight:1000; letter-spacing:.02em;
     background:var(--muted2); border:1px solid var(--border);
     padding:8px 14px; border-radius:999px;
-    /* color will be synced in JS to match clock */
+    /* color synced in JS */
   }
   @media (max-width:420px){ .stopwatch-top{font-size:29px} }
 
@@ -118,7 +118,7 @@
 
   /* Pause-only nav buttons beside the clock */
   .nav-btn{
-    display:none; /* default hidden, shown in pause via JS */
+    display:none; /* shown in pause via JS */
     border:1px solid var(--border);
     background:var(--muted2);
     color:inherit; /* matches countdown color via JS on body mode */
@@ -200,7 +200,7 @@
     .pause-banner{font-size:32px}
   }
 
-  /* Footer badge (version) — only version, no date */
+  /* Footer badge (version) — only version */
   .footer{
     position:fixed; bottom:6px; right:8px;
     text-align:right; font-size:12px; opacity:.92;
@@ -408,7 +408,7 @@
   </div>
 
   <!-- Version badge -->
-  <div class="footer" id="footerBadge">v16</div>
+  <div class="footer" id="footerBadge">v17</div>
 
   <!-- Transient bottom note (5s) -->
   <div class="transient" id="jjTransient">Jimmy James – 02.10.2025</div>
@@ -548,7 +548,7 @@
 
   function syncColors(){
     // Make stopwatch and rep number match the main countdown color
-    let col = getComputedStyle(clockEl).color;
+    const col = getComputedStyle(clockEl).color;
     stopwatchText.style.color = col;
     repBtn.style.color = col;
   }
@@ -578,8 +578,8 @@
     $('audioRow').style.display  = playing ? 'none' : '';
     if(playing && !settingsBlock.hidden){ settingsBlock.hidden=true; }
 
-    // Nav buttons only visible while paused (and timer has started at least once)
-    const showNav = (!state.running && state.elapsed>=0); // show even if elapsed=0 so you can nudge
+    // Nav buttons only visible while paused
+    const showNav = (!state.running); 
     backBtn.style.display = showNav ? 'inline-flex' : 'none';
     fwdBtn.style.display  = showNav ? 'inline-flex' : 'none';
   }
@@ -651,7 +651,7 @@
   // ---- Timer engine ----
   let rafId=null;
   let audioCtx=null;
-  const HALF_OCT=Math.SQRT2;
+  const HALF_OCT = Math.SQRT2; // defined ONCE
 
   function ensureAudio(){
     if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
@@ -737,7 +737,6 @@
   }
 
   // Theme-aware cues (Work=1, Rest=2 @ two pitches)
-  const HALF_OCT=Math.SQRT2;
   function cueWork(){
     ensureAudio();
     const th = state.soundTheme;
