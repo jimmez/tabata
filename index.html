@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Tabata Timer v18</title>
+<title>Tabata Timer v19</title>
 
 <!-- PWA-ish -->
 <meta name="theme-color" content="#000000">
@@ -58,14 +58,22 @@
   /* TOP-LEFT live device clock — same size as stopwatch */
   .live-clock{
     position:fixed; top:8px; left:8px; z-index:12;
-    font-size:32px; /* matches stopwatch-top */
+    font-size:32px;
     font-weight:1000; letter-spacing:.02em;
     background:var(--muted2); border:1px solid var(--border);
     padding:8px 14px; border-radius:999px;
   }
   @media (max-width:420px){ .live-clock{font-size:29px} }
 
-  /* TOP-CENTER STOPWATCH (fixed) — 10% smaller than original v12 */
+  /* Info pill moved to the left side, under the live clock */
+  .info-left{
+    position:fixed; top:52px; left:8px; z-index:12;
+    background:var(--muted2); color:#bbb; border:1px solid var(--border);
+    border-radius:999px; padding:6px 10px; font-size:12px; font-weight:800; cursor:pointer; user-select:none;
+  }
+  .info-left:active{transform:translateY(1px)}
+
+  /* TOP-CENTER STOPWATCH */
   .stopwatch-top{
     position:fixed; top:8px; left:50%; transform:translateX(-50%);
     z-index:12;
@@ -75,6 +83,17 @@
     padding:8px 14px; border-radius:999px;
   }
   @media (max-width:420px){ .stopwatch-top{font-size:29px} }
+
+  /* Settings-only Top Back button (shows only while .in-settings) */
+  .settings-back-top{
+    position:fixed; top:8px; right:8px; z-index:13;
+    display:none;
+    border:1px solid var(--border);
+    background:var(--muted2); color:#fff;
+    font-weight:900; font-size:14px;
+    padding:10px 12px; border-radius:12px; cursor:pointer;
+  }
+  body.in-settings .settings-back-top{ display:inline-flex; }
 
   .app{
     position:relative; z-index:1; max-width:820px; margin:0 auto;
@@ -95,22 +114,25 @@
   .workrest{display:flex; gap:8px; align-items:center;}
   .workrest.hidden{visibility:hidden;} /* reserve space, no layout shift */
 
-  /* Rep + Help pinned top-right — 20% smaller font */
+  /* Rep pinned top-right — responsive size */
   .top-right{
     position:fixed; top:6px; right:8px; z-index:11; display:flex; align-items:center; gap:8px;
   }
   .rep-big{
     background:transparent; border:none; color:#fff; cursor:pointer; user-select:none;
     font-weight:1000; line-height:1; letter-spacing:.02em;
-    font-size:58px; /* was 72px */
+    font-size:58px; /* base */
     text-shadow:0 2px 10px rgba(0,0,0,.35);
   }
-  @media (max-width:420px){ .rep-big{font-size:52px} }
-  .pill{
-    background:var(--muted2); color:#bbb; border:1px solid var(--border);
-    border-radius:999px; padding:6px 10px; font-size:12px; font-weight:800; cursor:pointer; user-select:none;
+  /* If 3+ digits, shrink more to avoid overlapping stopwatch */
+  .rep-big[data-len="3"]{ font-size:46px; }
+  .rep-big[data-len="4"]{ font-size:40px; }
+  /* Portrait-specific tighter cap */
+  @media (orientation:portrait){
+    .rep-big{ font-size:54px; }
+    .rep-big[data-len="3"]{ font-size:42px; }
+    .rep-big[data-len="4"]{ font-size:36px; }
   }
-  .pill:active{transform:translateY(1px)}
 
   /* Center stage */
   .midwrap{
@@ -239,14 +261,10 @@
   body.mode-pause .clock{ color:var(--nums-pause); }
   body.mode-pause .pause-banner{ display:block; }
 
-  /* Tiny toast */
-  .toast{
-    position:fixed; top:56px; left:50%; transform:translateX(-50%);
-    background:rgba(0,0,0,.7); padding:10px 14px; border-radius:10px;
-    border:1px solid var(--border); color:#fff; font-size:14px; z-index:20; display:none;
-  }
-  .toast.show{display:block; animation:fade 1.2s ease forwards}
-  @keyframes fade{0%{opacity:0; transform:translateX(-50%) translateY(-6px)} 12%{opacity:1; transform:translateX(-50%) translateY(0)} 80%{opacity:1} 100%{opacity:0}}
+  /* Hide most controls while in-settings for more space */
+  body.in-settings #actionRow,
+  body.in-settings #audioRow,
+  body.in-settings .nav-btn { display:none !important; }
 </style>
 </head>
 <body class="mode-work">
@@ -256,8 +274,14 @@
   <!-- TOP-LEFT LIVE CLOCK -->
   <div class="live-clock" id="liveClock">00:00</div>
 
+  <!-- INFO on left -->
+  <button id="openHelpLeft" class="info-left" aria-label="Open instructions">ℹ️</button>
+
   <!-- TOP-CENTER STOPWATCH -->
   <div class="stopwatch-top" id="stopwatchText">00:00</div>
+
+  <!-- SETTINGS top-only back (visible only while in-settings) -->
+  <button id="settingsBackTop" class="settings-back-top" title="Back to Timer">← Back</button>
 
   <div class="app" id="app">
     <!-- Fixed-height header (reserves space; no clock shift) -->
@@ -268,10 +292,9 @@
       </span>
     </div>
 
-    <!-- TOP-RIGHT: Big REP + info -->
+    <!-- TOP-RIGHT: Big REP -->
     <div class="top-right">
       <button id="repBtn" class="rep-big" title="Tap: +1 rep • Long-press: reset to 1">1</button>
-      <button id="openHelp" class="pill" aria-label="Open instructions">ℹ️</button>
     </div>
 
     <!-- CLOCK AREA -->
@@ -417,13 +440,10 @@
   </div>
 
   <!-- Version badge -->
-  <div class="footer" id="footerBadge">v18</div>
+  <div class="footer" id="footerBadge">v19</div>
 
   <!-- Transient bottom note (5s) -->
   <div class="transient" id="jjTransient">Jimmy James – 02.10.2025</div>
-
-  <!-- Toast -->
-  <div id="toast" class="toast">Repetitions reset to 1</div>
 
 <script>
   // ---- Minimal manifest for standalone ----
@@ -454,16 +474,11 @@
   const fmt = secs => { secs=Math.max(0,Math.round(secs));
     const h=Math.floor(secs/3600), m=Math.floor((secs%3600)/60), s=secs%60;
     return h>0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`; };
-  const toast=$('toast');
-  const showToast = t => { toast.textContent=t; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),1200); };
 
   // ---- Live 24h device clock (HH:MM) ----
   function fmtHHMM(d){ return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
-  function tickLiveClock(){
-    $('liveClock').textContent = fmtHHMM(new Date());
-  }
-  setInterval(tickLiveClock, 1000); // keep it fresh each minute/second
-  tickLiveClock();
+  function tickLiveClock(){ $('liveClock').textContent = fmtHHMM(new Date()); }
+  setInterval(tickLiveClock, 1000); tickLiveClock();
 
   // ---- Transient credit 5s ----
   (function showJJ(){
@@ -523,7 +538,8 @@
   const resetBtn = $('resetBtn');
   const openSettingsBtn = $('openSettings');
   const settingsBlock = $('settingsBlock');
-  const settingsClose = $('settingsClose');
+  const settingsClose = $('settingsClose'); // kept, but we'll also support the fixed top back
+  const settingsBackTop = $('settingsBackTop');
   const settingsReset = $('settingsReset');
 
   const soundToggle = $('soundToggle');
@@ -532,6 +548,9 @@
 
   const backBtn = $('backBtn');
   const fwdBtn  = $('fwdBtn');
+
+  // Info (left)
+  const openHelpLeft = $('openHelpLeft');
 
   // ---- Audio toggles ----
   soundToggle.checked = !state.muted;
@@ -548,6 +567,7 @@
     workGoalTopEl.textContent = `${pad(wp.m)}:${pad(wp.s)}`;
     restGoalTopEl.textContent = `${pad(rp.m)}:${pad(rp.s)}`;
     repBtn.textContent = String(state.rep);
+    repBtn.setAttribute('data-len', String(state.rep).length);
   }
   function currentTotal(){ return state.phase==='work' ? state.work : state.rest; }
   function remainingSeconds(){ return Math.max(0, Math.round(currentTotal() - state.elapsed)); }
@@ -565,7 +585,6 @@
   }
 
   function syncColors(){
-    // Make stopwatch, rep number, and live clock match the main countdown color
     const col = getComputedStyle(clockEl).color;
     stopwatchText.style.color = col;
     repBtn.style.color = col;
@@ -592,13 +611,17 @@
   }
   function updatePlayPauseVisibility(){
     const playing = state.running;
-    workRestHeader.classList.toggle('hidden', playing);
-    $('actionRow').style.display = playing ? 'none' : '';
-    $('audioRow').style.display  = playing ? 'none' : '';
-    if(playing && !settingsBlock.hidden){ settingsBlock.hidden=true; }
 
-    // Nav buttons only visible while paused
-    const showNav = (!state.running); 
+    // header tags hidden while playing
+    workRestHeader.classList.toggle('hidden', playing);
+
+    // bottom rows hidden while playing OR while settings open
+    const inSettings = document.body.classList.contains('in-settings');
+    $('actionRow').style.display = (playing || inSettings) ? 'none' : '';
+    $('audioRow').style.display  = (playing || inSettings) ? 'none' : '';
+
+    // pause-only nav buttons
+    const showNav = (!state.running) && !inSettings;
     backBtn.style.display = showNav ? 'inline-flex' : 'none';
     fwdBtn.style.display  = showNav ? 'inline-flex' : 'none';
   }
@@ -840,6 +863,7 @@
   let tapCount=0, tapTimer=null;
   function commitTap(){ const c=tapCount; tapCount=0; clearTimeout(tapTimer); tapTimer=null; if(c===1) toggleStartPause(); }
   $('timerArea').addEventListener('pointerdown', (e)=>{
+    if(document.body.classList.contains('in-settings')) return; // disable main tap while in settings
     if(e.target.closest('button, input, label, .digit, .ud button, .settings')) return;
     tapCount+=1; if(tapTimer) clearTimeout(tapTimer); tapTimer=setTimeout(commitTap, 250);
   });
@@ -857,12 +881,26 @@
     showToast('Reps reset • Stopwatch reset • Set to Work');
   });
 
-  // Settings
-  openSettingsBtn.addEventListener('click', ()=>{ if(state.running) pause(); settingsBlock.hidden=false; populateDigits('work',state.work); populateDigits('rest',state.rest); });
-  settingsClose.addEventListener('click', ()=>{ settingsBlock.hidden=true; });
+  // Settings open/close (top-only back while open)
+  function openSettings(){
+    pause(); // ensure we stay paused
+    settingsBlock.hidden=false;
+    document.body.classList.add('in-settings');
+    populateDigits('work',state.work); populateDigits('rest',state.rest);
+    updateAllUI();
+  }
+  function closeSettings(){
+    settingsBlock.hidden=true;
+    document.body.classList.remove('in-settings');
+    // remain paused when returning
+    updateAllUI();
+  }
+  openSettingsBtn.addEventListener('click', openSettings);
+  settingsClose.addEventListener('click', closeSettings);
+  settingsBackTop.addEventListener('click', closeSettings);
 
   // Help
-  $('openHelp').addEventListener('click', ()=>{ $('helpScreen').style.display='block'; });
+  openHelpLeft.addEventListener('click', ()=>{ $('helpScreen').style.display='block'; });
   $('backFromHelp').addEventListener('click', ()=>{ $('helpScreen').style.display='none'; });
 
   // Rep button (+1 tap, long-press reset to 1)
@@ -878,11 +916,12 @@
   });
   repBtn.addEventListener('pointerleave', ()=>{ repPressed=false; if(repPressTimer){ clearTimeout(repPressTimer); repPressTimer=null; } });
 
-  // Keyboard: any key toggles start/pause (unless typing or help open)
+  // Keyboard: any key toggles start/pause (unless typing or help/settings open)
   document.addEventListener('keydown', (e)=>{
     const tag=(e.target&&e.target.tagName)?e.target.tagName.toUpperCase():'';
     if(tag==='INPUT'||tag==='TEXTAREA'||e.target.isContentEditable) return;
     if($('helpScreen').style.display==='block') return;
+    if(document.body.classList.contains('in-settings')) return;
     toggleStartPause();
   });
 
@@ -896,7 +935,7 @@
   // ---- Pause-only navigation behavior ----
   backBtn.addEventListener('click', (e)=>{
     e.stopPropagation();
-    if(state.running) return; // only in pause
+    if(state.running || document.body.classList.contains('in-settings')) return;
 
     if(state.phase==='work'){
       restartCurrentPhasePaused();
@@ -911,7 +950,7 @@
 
   fwdBtn.addEventListener('click', (e)=>{
     e.stopPropagation();
-    if(state.running) return; // only in pause
+    if(state.running || document.body.classList.contains('in-settings')) return;
 
     if(state.phase==='work'){
       switchPhaseToPaused('rest', {incRep:false});
@@ -922,7 +961,6 @@
 
   // ---- Initial draw ----
   (function init(){
-    tickLiveClock();
     updateHeader();
     clockEl.textContent = fmt(state.work);
     const total=currentTotal(), frac = total>0?Math.min(state.elapsed/total,1):0;
